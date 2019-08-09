@@ -13,7 +13,7 @@ export declare function debug(a: i32): void;
 export declare function debug(a: i32): void;
 
 @external("env", "debug_mem")
-export declare function debug_mem(a: i32): void;
+export declare function debug_mem(pos: i32, len: i32): void;
 
 @external("env", "eth2_blockDataSize")
 export declare function eth2_blockDataSize(): i32;
@@ -123,7 +123,7 @@ let hashOutputPtr = changetype<usize>(hashOutputBuf);
         let leafHashOutputPtr = changetype<usize>(new ArrayBuffer(32));
         ethash_keccak256(leafHashOutputPtr, (leaf_node.buffer as usize) + leaf_node.byteOffset, leaf_node.byteLength);
 
-        debug_mem(leafHashOutputPtr);
+        debug_mem(leafHashOutputPtr, 32);
         multiproofStack[stackTop] = leafHashOutputPtr;
         stackTop++;
 
@@ -135,6 +135,9 @@ let hashOutputPtr = changetype<usize>(hashOutputBuf);
         // operand = [length_byte, ...branch_indexes]
         let branch_num_children = (multiproof_opcodes[pc] as i32);
         pc++; // advance past length byte (number of branch children)
+
+        debug(branch_num_children);
+
         // construct RLPData[] for encode()
         // doesn't need RLPData.buffer, just RLPData.children (RLPData.children = RLPData[])
         // each child needs RLPData.buffer
@@ -198,21 +201,24 @@ let hashOutputPtr = changetype<usize>(hashOutputBuf);
         // bytes for empty nodes (0x80) = (17 - branch_num_children)
         let list_bytes_len = (33 * branch_num_children) + (17 - branch_num_children);
         let branch_node_bytes: usize;
+        let branch_node_bytes_len: usize;
         let branch_node_datastart: usize;
         debug(5555);
         if (branch_num_children < 8) {
           //0xf8 + (list_len as u8) + bytes..
           branch_node_bytes = changetype<usize>(new ArrayBuffer(list_bytes_len + 2));
+          branch_node_bytes_len = list_bytes_len + 2;
           store<u8>(branch_node_bytes, 0xf8);
           store<u16>(branch_node_bytes + 1, (list_bytes_len as u8));
-          debug_mem(branch_node_bytes);
+          debug_mem(branch_node_bytes, 32);
           branch_node_datastart = branch_node_bytes + 2;
         } else {
           //0xf9 + (list_len as u16) + bytes..
           branch_node_bytes = changetype<usize>(new ArrayBuffer(list_bytes_len + 3));
+          branch_node_bytes_len = list_bytes_len + 3;
           store<u8>(branch_node_bytes, 0xf9);
-          store<u16>(branch_node_bytes + 1, (list_bytes_len as u16));
-          debug_mem(branch_node_bytes);
+          store<u16>(branch_node_bytes + 1, bswap<u16>(list_bytes_len as u16));
+          debug_mem(branch_node_bytes, 32);
           branch_node_datastart = branch_node_bytes + 3;
         }
 
@@ -228,21 +234,55 @@ let hashOutputPtr = changetype<usize>(hashOutputBuf);
         // could create a DataView to read the operand bytes (branch child indexes), but guess that would be more overhead.
         // do it manually with pc++
 
+        /*
+        // old way without creating an array
         // first child
         let next_child = (multiproof_opcodes[pc] as u8);
         pc++; // should advance pc only branch_num_children times
-
         debug(5566);
         debug(next_child);
 
+        */
+
+        // new way using an array
+        // first pop all the hash pointers off the stack, so we can process them in ascending order
+        let child_indexes = new Array<u8>(branch_num_children);
+        for (let i = 0; i < branch_num_children; i++) {
+          //debug(101010);
+          // read child index
+          child_indexes[i] = (multiproof_opcodes[pc] as u8);
+          //deubg(child_indexes[i]);
+          pc++; // should advance pc only branch_num_children times
+        }
+
+        // we need to reverse the child indexes.
+        // for that to work, we also need to pop off hashes off the stack into a reversed list
+        let child_indexes_ascending = new Array<u8>(branch_num_children);
+        let child_hash_ptrs = new Array<usize>(branch_num_children);
+        for (let i = 0; i < branch_num_children; i++) {
+          let reverse_i = branch_num_children - 1 - i;
+          child_indexes_ascending[i] = child_indexes[reverse_i];
+          //debug(010101);
+          //debug()
+          // pop child hash off the stack
+          stackTop--;
+          child_hash_ptrs[reverse_i] = multiproofStack[stackTop];
+        }
+
+
         let children_copied = 0;
         //let all_children_copied = false;
+        //slet next_child = child_indexes_ascending[children_copied];
+        let next_child: u8;
 
         let branch_node_offset = branch_node_datastart;
         let i: u8 = 0;
         while (i < 17) {
+          debug(6600);
+          debug(i);
 
           if (children_copied < branch_num_children) {
+            next_child = child_indexes_ascending[children_copied];
             // first insert all the 0x80's for empty slots
             if (i < next_child) {
               // TODO: maybe the check isn't necessary if memory.fill accepts 0 length inputs
@@ -253,45 +293,53 @@ let hashOutputPtr = changetype<usize>(hashOutputBuf);
               branch_node_offset = branch_node_offset + num_empties;
 
               debug(5577);
-              debug_mem(branch_node_offset - 32);
+              //debug_mem(branch_node_offset - 32);
               i = next_child;
+              debug(i);
             }
 
+            debug(55771);
             // now copy the child
-
-            // pop child hash off the stack
-            stackTop--;
-            let child_hash_ptr = multiproofStack[stackTop];
-
-            // read next child index
-            next_child = (multiproof_opcodes[pc] as u8);
-            pc++; // on last child, this advances pc++ to the next opcode
-            children_copied++;
-
-            // insert 0xa0 byte and copy the child hash
+            // insert 0xa0 byte
             store<u8>(branch_node_offset, 0xa0);
             branch_node_offset++;
+            // copy the child hash
+            debug(55772);
+            let child_hash_ptr = child_hash_ptrs[children_copied];
             memory.copy(branch_node_offset, child_hash_ptr, 32);
             branch_node_offset = branch_node_offset + 32;
+            children_copied++;
 
             debug(5588);
-            debug_mem(branch_node_offset - 32);
+            debug_mem(branch_node_offset - 32, 32);
+
+          // children_copied >= branch_num_children
           } else {
             // we've copied all children and still haven't filled all 17 slots
             // copy empties to the end
-            let num_empties = 17 - (i + 1);
+            let num_empties = 17 - i;
             memory.fill(branch_node_offset, 0x80, num_empties);
             branch_node_offset = branch_node_offset + num_empties;
             debug(5599);
-            debug_mem(branch_node_offset - 32);
+            debug_mem(branch_node_offset - 32, 32);
             break;
           }
 
+          debug(6601);
+          debug(i);
           i = i + 1;
         }
 
         // branch node is constructed, now hash it and push hash back on stack
-        
+        debug(668866);
+        debug_mem(branch_node_bytes, branch_node_bytes_len);
+
+        let branchHashOutputPtr = changetype<usize>(new ArrayBuffer(32));
+        ethash_keccak256(branchHashOutputPtr, branch_node_bytes, branch_node_bytes_len);
+
+        debug_mem(branchHashOutputPtr, 32);
+        multiproofStack[stackTop] = branchHashOutputPtr;
+        stackTop++;
 
 
         //for (let i = 0; i < branchhash_operand_len; i++) {
@@ -313,7 +361,7 @@ let hashOutputPtr = changetype<usize>(hashOutputBuf);
           let hash_ptr = hashes_data_start_ptr + hashes_seq_i*32;
           hashes_seq_i += 1;
           //let hashPtr = (hash.buffer as usize) + hash.byteOffset;
-          debug_mem(hash_ptr);
+          debug_mem(hash_ptr, 32);
           multiproofStack[stackTop] = hash_ptr;
           stackTop++;
         }
@@ -328,8 +376,9 @@ let hashOutputPtr = changetype<usize>(hashOutputBuf);
 
 
 
+  let prestate_root_ptr = multiproofStack[stackTop - 1];
 
-  eth2_savePostStateRoot(root_hash_buf as usize);
+  eth2_savePostStateRoot(prestate_root_ptr);
   return 1;
 
 }
