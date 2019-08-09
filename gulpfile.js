@@ -1,0 +1,143 @@
+const gulp = require("gulp");
+const fs = require("fs");
+const wabt = require("wabt")();
+/**
+ * A bunch of magic happens below to merge functions from a wat file
+ * into the assemblyscript output wasm.
+ *
+ * The `ImportStatementToDelete` is a config setting that you might
+ * have to update if the `export declare function keccak(...)`
+ * is moved between different files.
+ * 
+ * If you change something and AS uses a different imported name,
+ * don't forget to edit the entry function in keccak-funcs.wat
+ * so that it matches. see the line near the bottom:
+ *   (func $keccak/keccak ;; this name needs to match what assemblyscript generates
+ * 
+ */
+
+const ImportStatementToDelete = '(import "watimports" "$ethash_keccak256" (func $keccak/ethash_keccak256 (param i32 i32 i32)))';
+
+
+
+/*
+  Runtime variants:
+  "--runtime", "full" (default)
+    A proper memory manager and reference-counting based garbage collector, with runtime interfaces
+    being exported to the host for being able to create managed objects externally.
+  "--runtime", "half"
+    The same as full but without any exports, i.e. where creating objects externally is not required.
+    This allows the optimizer to eliminate parts of the runtime that are not needed.
+  "--runtime", "stub"
+    A minimalist arena memory manager without any means of freeing up memory again, but the same external
+    interface as full. Useful for very short-lived programs or programs with hardly any memory footprint,
+    while keeping the option to switch to full without any further changes. No garbage collection.
+  "--runtime", "none"
+    The same as stub but without any exports, for the same reasons as explained in half. Essentially
+    evaporates entirely after optimizations.
+    For more information see: https://docs.assemblyscript.org/details/runtime
+*/
+//gulp.task("build", callback => {
+function build(callback) {
+  console.log('gulp.js build task..');
+  const asc = require("assemblyscript/bin/asc");
+
+
+  asc.main([
+    "main.ts",
+    //"--baseDir", "assembly",
+    "--binaryFile", "out/main.wasm",
+    "--textFile", "out/main.wat",
+    "--sourceMap",
+    "--measure",
+    "--runtime", "none",
+    "--use", "abort=",
+    "--memoryBase", "10000",
+    "--optimize"
+  ], ascDone);
+
+
+  function ascDone(res) {
+    console.log("ascDone res:", res)
+    if (res) {
+      throw new Error("AssemblyScript error!!");
+    }
+    
+    mergeWats();
+  }
+
+  function mergeWats() {
+    console.log('wabt:', wabt);
+
+    //const utils = require("@wasm/studio-utils");
+    //console.log("loading src/ethash_keccak_funcs.wat...");
+    //const keccakWat = utils.project.getFile("src/ethash_keccak_funcs.wat").getData();
+    const keccakWat = fs.readFileSync("src/ethash_keccak_funcs.wat", "utf8");
+    //console.log("loaded keccak wat:", keccakWat);
+    const keccakLines = keccakWat.split("\n")
+
+    console.log("loading out/main.wat...");
+    //const mainWat = utils.project.getFile("out/main.wat").getData();
+    const mainWat = fs.readFileSync("out/main.wat", "utf8");
+    //logLn("loaded main wat:", mainWat);
+    var mainLines = mainWat.split("\n");
+    console.log("main wat line count:", mainLines.length);
+    // mainLines.length is 915
+    // mainLines[0] is `(module`
+    // mainLines[913] is is the closing paren `)`
+    // mainLines[914] is an empty line ``
+    // closing paren is second to last line
+
+    var closing_paren_ix = mainLines.length - 2;
+
+    // insert keccak functions wat code just before the last closing paren
+    mainLines.splice(closing_paren_ix, 0, ...keccakLines);
+
+    console.log('mainLines with keccak inserted:', mainLines.length);
+
+    // now delete the import statement
+    console.log("searching for import statement to delete...");
+
+    var foundImport = false;
+    for (var i=0; i<20; i++) {
+      console.log(mainLines[i]);
+      if (mainLines[i].trim() === ImportStatementToDelete) {
+        console.log("found import statement!! deleting it...");
+        mainLines.splice(i, 1);
+        foundImport = true;
+        break;
+      }
+    }
+
+    if (!foundImport) {
+      console.log("ERROR!! Couldn't find keccak import statement! wat parsing will probably fail.");
+    }
+
+    console.log('mainLines after deleting import statement:', mainLines.length);
+
+    var features = {'mutable_globals':false};
+    var myModule = wabt.parseWat("main_with_keccak.wat", mainLines.join("\n"), features);
+    console.log('parsed merged wat..');
+    myModule.resolveNames();
+    console.log('names resolved...');
+    myModule.validate();
+    console.log('myModule validated!!');
+    let binary_result = myModule.toBinary({ write_debug_names: true });
+    //console.log('binary_result:', binary_result);
+
+    //var wasm_output = utils.project.newFile("out/main_with_keccak.wasm", "wasm");
+    //wasm_output.setData(binary_result.buffer);
+    fs.writeFileSync("out/main_with_keccak.wasm", binary_result.buffer);
+
+    console.log('done merging wat codes.');
+
+    callback();
+
+  }
+
+
+}
+
+
+exports.build = build;
+exports.default = build;
