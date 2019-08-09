@@ -1,24 +1,169 @@
 // RLP code is taken from https://github.com/nearprotocol/assemblyscript-rlp
-// a couple of bugs in the original code are fixed here.
 
-/** debugging functions
-@external("main", "sayHello")
-export declare function sayHello(a: i32): void;
-
-@external("main", "debug")
-export declare function debug(a: i32): void;
-*/
-
+import { ethash_keccak256 } from "./keccak";
 
 @external("env", "debug_log")
 export declare function debug(a: i32): void;
+
+@external("env", "debug_mem")
+export declare function debug_mem(pos: i32, len: i32): void;
+
+
+
+export class RLPBranchNode {
+  constructor(
+    public children: Array<usize>,
+    public dirty: Array<u8> | null,
+  ) {}
+}
+
+
+function isNotZero(val: usize): bool {
+  return val > 0;
+}
+
+export function hashBranchNode(branchNodeChildren: Array<usize>): usize {
+  // manually construct the encoded branch node
+  /*
+  // here's an encoded branch node with 4 child hashes:
+  f891808080808080a09f48e0438e53d55e53bb935c4a80e294ff56055cc4b584635b4bafbf894226088080a04216caf9df3c72b105e86b5b75ecb16e09e4a6a718bb27b0b83ec6fd79bb6c0c80a0e17ee4374bd5002160209877201836362b93a75ce5813bf4789053dd613d22e08080a0b82fb32a26c22edc12788287a7d157a5be2443a4ea2a0722c77f5b995ef40d038080
+  // it's 147 bytes. the 4 children are 32 * 4 == 128 bytes
+  // the branch node is an RLP list of 17 elements, so 13 elements are empty. an empty element is `80`, so that's 13 bytes. 128 + 13 = 141 bytes.
+  // that leaves 6 bytes for encoding (2 for 0xf891, 4 of 0xa0)
+  f8 ;; RLP list over 55 bytes. length of byte length is (0xf8 - 0xf7 = 1)
+  91 ;; list length = 145
+  80 ;; branch index 0
+  80 ;; 1
+  80 ;; 2
+  80 ;; branch index 3
+  80 ;; branch index 4
+  80 ;; branch index 5
+  a0 ;; length of string is (0xa0 - 0x80) = 32
+  9f48e0438e53d55e53bb935c4a80e294ff56055cc4b584635b4bafbf89422608 ;; hash at branch index 6
+  80 ;; branch index 7
+  80 ;; branch index 8
+  a0 ;; length of string
+  4216caf9df3c72b105e86b5b75ecb16e09e4a6a718bb27b0b83ec6fd79bb6c0c ;; branch index 9
+  80 ;; branch index a
+  a0
+  e17ee4374bd5002160209877201836362b93a75ce5813bf4789053dd613d22e0 ;; branch index b
+  80 ;; c
+  80 ;; d
+  a0
+  b82fb32a26c22edc12788287a7d157a5be2443a4ea2a0722c77f5b995ef40d03 ;; branch index e
+  80 ;; f
+  80 ;; 17th element
+  */
+
+  // branch node will always have at least 2 children, so its length will always be at least 64 bytes
+  // first byte of a branch node will be either f8 (<= 7 children) or f9 (>= 8 children)
+  // two children: length is 81 bytes (0x51)
+  // three children: length is 113 bytes (0x71)
+  // four children: length is 145 bytes (0x91)
+  // five children: length is 177 bytes (0xb1)
+
+  // bytes for hashes = len(0xa0 + hash) = 33*branch_num_children
+  // bytes for empty nodes (0x80) = (17 - branch_num_children)
+
+
+  let child_indexes = Array.create<u8>(17);
+  let child_hash_ptrs = Array.create<usize>(17);
+  for (let i = 0; i < 17; i++) {
+    // read child index
+    if (branchNodeChildren[i] > 0) {
+      child_indexes.push(i as u8);
+      child_hash_ptrs.push(branchNodeChildren[i]);
+    }
+  }
+
+  let branch_num_children = child_indexes.length;
+
+  // allocate buffer for branch node
+  let list_bytes_len = (33 * branch_num_children) + (17 - branch_num_children);
+  let branch_node_bytes: usize;
+  let branch_node_bytes_len: usize;
+  let branch_node_datastart: usize;
+  if (branch_num_children < 8) {
+    //0xf8 + (list_len as u8) + bytes..
+    branch_node_bytes = changetype<usize>(new ArrayBuffer(list_bytes_len + 2));
+    branch_node_bytes_len = list_bytes_len + 2;
+    store<u8>(branch_node_bytes, 0xf8);
+    store<u16>(branch_node_bytes + 1, (list_bytes_len as u8));
+    branch_node_datastart = branch_node_bytes + 2;
+  } else {
+    //0xf9 + (list_len as u16) + bytes..
+    branch_node_bytes = changetype<usize>(new ArrayBuffer(list_bytes_len + 3));
+    branch_node_bytes_len = list_bytes_len + 3;
+    store<u8>(branch_node_bytes, 0xf9);
+    store<u16>(branch_node_bytes + 1, bswap<u16>(list_bytes_len as u16));
+    branch_node_datastart = branch_node_bytes + 3;
+  }
+
+
+  let children_copied = 0;
+  let next_child: u8;
+
+  let branch_node_offset = branch_node_datastart;
+  let i: u8 = 0;
+  while (i < 17) {
+
+    if (children_copied < branch_num_children) {
+      next_child = child_indexes[children_copied];
+      // first insert all the 0x80's for empty slots
+      if (i < next_child) {
+        // TODO: maybe the check isn't necessary if memory.fill accepts 0 length inputs
+
+        let num_empties = next_child - i;
+        memory.fill(branch_node_offset, 0x80, num_empties);
+        branch_node_offset = branch_node_offset + num_empties;
+
+        i = next_child;
+      }
+
+      // could be optimized to reduce memory copying. might require a different sequence of opcodes / hashes
+      // or using keccak.update() might be better
+
+      // now copy the child
+      // insert 0xa0 byte
+      store<u8>(branch_node_offset, 0xa0);
+      branch_node_offset++;
+      // copy the child hash
+      let child_hash_ptr = child_hash_ptrs[children_copied];
+      memory.copy(branch_node_offset, child_hash_ptr, 32);
+      branch_node_offset = branch_node_offset + 32;
+      children_copied++;
+
+    } else {
+      // children_copied >= branch_num_children
+      // we've copied all children and still haven't filled all 17 slots
+      // copy empties to the end
+      let num_empties = 17 - i;
+      memory.fill(branch_node_offset, 0x80, num_empties);
+      branch_node_offset = branch_node_offset + num_empties;
+      break;
+    }
+
+    i = i + 1;
+  }
+
+  // branch node is constructed, now hash it and push hash back on stack
+
+  //debug_mem(branch_node_bytes, branch_node_bytes_len);
+
+  let branchHashOutputPtr = changetype<usize>(new ArrayBuffer(32));
+  ethash_keccak256(branchHashOutputPtr, branch_node_bytes, branch_node_bytes_len);
+  //debug_mem(branchHashOutputPtr, 32);
+
+  return branchHashOutputPtr;
+}
+
 
 
 /**
  * class that represents data in rlp format. Due to the lack of support for recursive
  * data types, we have to use a class instead.
  */
- export class RLPData {
+export class RLPData {
     buffer: Uint8Array;
     children: RLPData[];
 
@@ -129,26 +274,83 @@ export function encode(input: RLPData): Uint8Array {
     if (input.children.length) {
         let output = new Array<Uint8Array>();
         for (let i = 0; i < input.children.length; i++) {
+            //debug(i);
             output.push(encode(input.children[i]));
         }
         let buf = concatUint8Arrays(output);
         return concatUint8Array(encodeLength(buf.length, 192), buf);
     } else {
+        //debug_mem((input.buffer.buffer as usize) + input.buffer.byteOffset, input.buffer.byteLength);
         if (input.buffer.length == 1 && input.buffer[0] < 128) {
             return input.buffer;
         }
-        return concatUint8Array(encodeLength(input.buffer.length, 128), input.buffer);
+        let len_encoded = encodeLength(input.buffer.length, 128);
+        //debug_mem(len_encoded.dataStart, len_encoded.byteLength);
+        return concatUint8Array(len_encoded, input.buffer);
     }
 }
 
 function encodeLength(len: u32, offset: u32): Uint8Array {
     if (len < 56) {
+        //let hex_from_int = intToHex(len + offset);
+        let int = len + offset;
+        //debug(int);
+        if (int < 256) {
+          let int_as_bytes = new Uint8Array(1);
+          int_as_bytes[0] = int as u8;
+          return int_as_bytes;
+        }
+        if (int < 65536) {
+          let int_as_bytes = new Uint8Array(2);
+          //let int_view = DataView.wrap(int_as_bytes.buffer, 0, 2);
+          let int_view = new DataView(int_as_bytes.buffer, 0, 2);
+          int_view.setUint16(0, int as u16, false);
+          return int_as_bytes;
+        }
+        throw new Error('longer lengths unsupported');
+        //return hexToBytes(intToHex(len + offset));
         return hexToBytes(intToHex(len + offset));
     } else {
+        /*
         let hexLength = intToHex(len);
         let lLength = hexLength.length / 2;
         let firstByte = intToHex(offset + 55 + lLength);
         return concatUint8Array(hexToBytes(firstByte), hexToBytes(hexLength));
+        */
+        let len_as_bytes: Uint8Array;
+        let lLength: u32;
+        //debug(len);
+        if (len < 256) {
+          lLength = 1;
+          len_as_bytes = new Uint8Array(1);
+          len_as_bytes[0] = len as u8;
+        } else if (len < 65536) {
+          lLength = 2;
+          len_as_bytes = new Uint8Array(2);
+          let len_view = new DataView(len_as_bytes.buffer, 0, 2);
+          len_view.setUint16(0, len as u16, false);
+        } else {
+          throw new Error('longer lengths unsupported');
+        }
+
+        let firstByte_as_bytes: Uint8Array;
+        let firstByte = offset + 55 + lLength;
+        //debug(firstByte);
+        if (firstByte < 256) {
+          firstByte_as_bytes = new Uint8Array(1);
+          firstByte_as_bytes[0] = firstByte as u8;
+          //return int_as_bytes;
+        } else if (firstByte < 65536) {
+          firstByte_as_bytes = new Uint8Array(2);
+          //let int_view = DataView.wrap(int_as_bytes.buffer, 0, 2);
+          let int_view = new DataView(firstByte_as_bytes.buffer, 0, 2);
+          int_view.setUint16(0, firstByte as u16, false);
+          //return int_as_bytes;
+        } else {
+          throw new Error('longer lengths unsupported');
+        }
+
+        return concatUint8Array(firstByte_as_bytes, len_as_bytes);
     }
 }
 

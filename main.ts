@@ -1,5 +1,5 @@
 import { ethash_keccak256 } from "./keccak";
-import { RLPData, decode } from "./rlp";
+import { hashBranchNode, RLPBranchNode, RLPData, decode, encode } from "./rlp";
 
 @external("env", "debug_log")
 export declare function debug(a: i32): void;
@@ -20,6 +20,33 @@ export declare function eth2_loadPreStateRoot(offset: i32): void;
 export declare function eth2_savePostStateRoot(offset: i32): void;
 
 
+enum NodeType {
+  Leaf,
+  Branch,
+};
+
+
+
+// for Map<UintArray,Node> binaryen toText generates function names with commas, which wabt doesn't like.
+
+var Trie = new Map<usize,Node>();
+
+
+class Node {
+  constructor(
+    //public type: u8,
+    public type: NodeType,
+
+    // a leaf node is just the rlp encoded leaf
+    // public body: RLPBranchNode | Uint8Array,
+
+    public branchBody: RLPBranchNode | null,
+    public leafBody: Uint8Array | null,
+
+  ) {}
+}
+
+
 export function main(): i32 {
 
   /** these globals were defined above as top level statements
@@ -34,12 +61,6 @@ export function main(): i32 {
   // allocate keccak context buffer
   let keccakCtx = new ArrayBuffer(650); // more than 616 (see the docs in keccak.tx)
   let keccakCtxBuf = changetype<usize>(keccakCtx);
-
-  // allocate keccak output buffer
-  let hashOutputBuf = new ArrayBuffer(32);
-  // use Uint64Array rather than Uint8Array so we can test equivalence of hashes by checking 4 elements rather than 32
-  let hashOutput = Uint64Array.wrap(hashOutputBuf, 0, 4);
-  let hashOutputPtr = changetype<usize>(hashOutputBuf);
 
 
   // INPUT 1: pre-state root
@@ -92,13 +113,19 @@ export function main(): i32 {
         // hash the leaf and push hash onto stack
         let leaf_node = accounts_sequence[accounts_seq_i].buffer;
         accounts_seq_i += 1;
+        //debug_mem((leaf_node.buffer as usize) + leaf_node.byteOffset, leaf_node.byteLength);
 
         // leaf operand is the key length for the account leaf
+        // key lenght might be useful for verifying an exclusion proof for a new leaf
+        // TODO: handle new leaf / exclusion proof
 
-        // TODO: get the key for the account leaf (the hash of the address)
-
-        let leafHashOutputPtr = changetype<usize>(new ArrayBuffer(32));
+        let leafHashOutput = new ArrayBuffer(32);
+        let leafHashOutputPtr = changetype<usize>(leafHashOutput);
         ethash_keccak256(leafHashOutputPtr, (leaf_node.buffer as usize) + leaf_node.byteOffset, leaf_node.byteLength);
+        //debug_mem(leafHashOutputPtr, 32);
+
+        let leaf_node_obj = new Node(NodeType.Leaf, null, leaf_node);
+        Trie.set(leafHashOutputPtr, leaf_node_obj);
 
         multiproofStack[stackTop] = leafHashOutputPtr;
         stackTop++;
@@ -107,108 +134,13 @@ export function main(): i32 {
         break;
 
 
-      /*
-      // this BRANCHHASH uses rlp.ts to encode the branch nodes
+
       case BRANCHHASH:
-        // construct RLPData[] for encode()
-        // doesn't need RLPData.buffer, just RLPData.children (RLPData.children = RLPData[])
-        // each child needs RLPData.buffer
+        // construct branch node for RLP encoder
 
-        let rlp_string_datas: RLPData[] = new Array<RLPData>();
-        for (let i=0; i<testString.length; i++) {
-            let elem_string = new RLPData(stringToBytes(testString[i]), nullRlpData);
-            rlp_string_datas.push(elem_string);
-        }
-        let rlpData = new RLPData(nullUint8Arr, rlp_string_datas);
-        //let branch_node: RLPData[] = new Array<RLPData>(17);
-        //for (let i = 0; i < branchhash_operand_len; i++) {
-        //  // pop 
-        //  // pass a Uint8Array to branchChild
-        //  let branch_child = new RLPData(, null);
-        //}
-      */
-
-
-      // this BRANCHHASH manually encodes the branch nodes
-      case BRANCHHASH:
-        // operand = [branch_num_children, ...branch_indexes]
         let branch_num_children = (multiproof_opcodes[pc] as i32);
         pc++; // advance past length byte (number of branch children)
 
-        // let's manually construct the encoded branch node, instead of using the RLP library
-        // the length will depend on the number of child hashes
-        /*
-        // here's an encoded branch node with 4 child hashes:
-        f891808080808080a09f48e0438e53d55e53bb935c4a80e294ff56055cc4b584635b4bafbf894226088080a04216caf9df3c72b105e86b5b75ecb16e09e4a6a718bb27b0b83ec6fd79bb6c0c80a0e17ee4374bd5002160209877201836362b93a75ce5813bf4789053dd613d22e08080a0b82fb32a26c22edc12788287a7d157a5be2443a4ea2a0722c77f5b995ef40d038080
-        // it's 147 bytes. the 4 children are 32 * 4 == 128 bytes
-        // the branch node is an RLP list of 17 elements, so 13 elements are empty. an empty element is `80`, so that's 13 bytes. 128 + 13 = 141 bytes.
-        // that leaves 6 bytes for encoding (2 for 0xf891, 4 of 0xa0)
-        f8 ;; RLP list over 55 bytes. length of byte length is (0xf8 - 0xf7 = 1)
-        91 ;; list length = 145
-        80 ;; branch index 0
-        80 ;; 1
-        80 ;; 2
-        80 ;; branch index 3
-        80 ;; branch index 4
-        80 ;; branch index 5
-        a0 ;; length of string is (0xa0 - 0x80) = 32
-        9f48e0438e53d55e53bb935c4a80e294ff56055cc4b584635b4bafbf89422608 ;; hash at branch index 6
-        80 ;; branch index 7
-        80 ;; branch index 8
-        a0 ;; length of string
-        4216caf9df3c72b105e86b5b75ecb16e09e4a6a718bb27b0b83ec6fd79bb6c0c ;; branch index 9
-        80 ;; branch index a
-        a0
-        e17ee4374bd5002160209877201836362b93a75ce5813bf4789053dd613d22e0 ;; branch index b
-        80 ;; c
-        80 ;; d
-        a0
-        b82fb32a26c22edc12788287a7d157a5be2443a4ea2a0722c77f5b995ef40d03 ;; branch index e
-        80 ;; f
-        80 ;; 17th element
-        */
-
-        // branch node will always have at least 2 children, so its length will always be at least 64 bytes
-        // first byte of a branch node will be either f8 (<= 7 children) or f9 (>= 8 children)
-        // two children: length is 81 bytes (0x51)
-        // three children: length is 113 bytes (0x71)
-        // four children: length is 145 bytes (0x91)
-        // five children: length is 177 bytes (0xb1)
-
-        // bytes for hashes = len(0xa0 + hash) = 33*branch_num_children
-        // bytes for empty nodes (0x80) = (17 - branch_num_children)
-
-        // allocate buffer for branch node
-        let list_bytes_len = (33 * branch_num_children) + (17 - branch_num_children);
-        let branch_node_bytes: usize;
-        let branch_node_bytes_len: usize;
-        let branch_node_datastart: usize;
-        if (branch_num_children < 8) {
-          //0xf8 + (list_len as u8) + bytes..
-          branch_node_bytes = changetype<usize>(new ArrayBuffer(list_bytes_len + 2));
-          branch_node_bytes_len = list_bytes_len + 2;
-          store<u8>(branch_node_bytes, 0xf8);
-          store<u16>(branch_node_bytes + 1, (list_bytes_len as u8));
-          branch_node_datastart = branch_node_bytes + 2;
-        } else {
-          //0xf9 + (list_len as u16) + bytes..
-          branch_node_bytes = changetype<usize>(new ArrayBuffer(list_bytes_len + 3));
-          branch_node_bytes_len = list_bytes_len + 3;
-          store<u8>(branch_node_bytes, 0xf9);
-          store<u16>(branch_node_bytes + 1, bswap<u16>(list_bytes_len as u16));
-          branch_node_datastart = branch_node_bytes + 3;
-        }
-
-        /*
-        * could create a DataView to read the operand bytes (branch child indexes), but guess that would be more overhead.
-        * started to do it manually, but realized it would be convenient with a reversed list of hashes
-
-        // first child
-        let next_child = (multiproof_opcodes[pc] as u8);
-        pc++; // should advance pc only branch_num_children times
-        */
-
-        // do it using an array
         // first pop all the hash pointers off the stack, so we can process them in ascending order
         let child_indexes = new Array<u8>(branch_num_children);
         for (let i = 0; i < branch_num_children; i++) {
@@ -218,6 +150,7 @@ export function main(): i32 {
         }
 
         // reverse the child indexes and hashes, keeps `while (i < 17)` loop and offset numbers simpler
+        // TODO: tweak multiproof format so we don't have to do this
         let child_indexes_ascending = new Array<u8>(branch_num_children);
         let child_hash_ptrs = new Array<usize>(branch_num_children);
         for (let i = 0; i < branch_num_children; i++) {
@@ -230,53 +163,47 @@ export function main(): i32 {
         }
 
 
-        let children_copied = 0;
-        let next_child: u8;
+        /* *** using RLPData *****/
+        /*
+        let branch_template = Array.create<RLPData>(17);
+        let branch_node = new RLPData(null, branch_template);
 
-        let branch_node_offset = branch_node_datastart;
-        let i: u8 = 0;
-        while (i < 17) {
-
-          if (children_copied < branch_num_children) {
-            next_child = child_indexes_ascending[children_copied];
-            // first insert all the 0x80's for empty slots
-            if (i < next_child) {
-              // TODO: maybe the check isn't necessary if memory.fill accepts 0 length inputs
-
-              let num_empties = next_child - i;
-              memory.fill(branch_node_offset, 0x80, num_empties);
-              branch_node_offset = branch_node_offset + num_empties;
-
-              i = next_child;
-            }
-
-            // now copy the child
-            // insert 0xa0 byte
-            store<u8>(branch_node_offset, 0xa0);
-            branch_node_offset++;
-            // copy the child hash
-            let child_hash_ptr = child_hash_ptrs[children_copied];
-            memory.copy(branch_node_offset, child_hash_ptr, 32);
-            branch_node_offset = branch_node_offset + 32;
-            children_copied++;
-
-          } else {
-            // children_copied >= branch_num_children
-            // we've copied all children and still haven't filled all 17 slots
-            // copy empties to the end
-            let num_empties = 17 - i;
-            memory.fill(branch_node_offset, 0x80, num_empties);
-            branch_node_offset = branch_node_offset + num_empties;
-            break;
-          }
-
-          i = i + 1;
+        for (let i = 0; i < 17; i++) {
+          branch_node.children.push(new RLPData(null, Array.create<RLPData>(0)));
         }
 
-        // branch node is constructed, now hash it and push hash back on stack
+        for (let i = 0; i < branch_num_children; i++) {
+          let branch_child_bytes = new Uint8Array(32);
+          //debug_mem(child_hash_ptrs[i], 32);
+          memory.copy((branch_child_bytes.buffer as usize) + branch_child_bytes.byteOffset, child_hash_ptrs[i], 32);
+          //debug_mem((branch_child_bytes.buffer as usize) + branch_child_bytes.byteOffset, branch_child_bytes.byteLength);
 
-        let branchHashOutputPtr = changetype<usize>(new ArrayBuffer(32));
-        ethash_keccak256(branchHashOutputPtr, branch_node_bytes, branch_node_bytes_len);
+          branch_node.children[branch_index] = new RLPData(branch_child_bytes, null);
+        }
+
+        let encoded_branch = encode(branch_node);
+        //debug_mem((encoded_branch.buffer as usize) + encoded_branch.byteOffset, encoded_branch.byteLength);
+
+        let branchHashOutput = new ArrayBuffer(32);
+        let branchHashOutputPtr = changetype<usize>(branchHashOutput);
+        ethash_keccak256(branchHashOutputPtr, (encoded_branch.buffer as usize) + encoded_branch.byteOffset, encoded_branch.byteLength);
+        //debug_mem(branchHashOutputPtr, 32);
+        */
+
+
+        /* *** using RLPBranchNode *****/
+        let branch_node_optim = new RLPBranchNode(new Array<usize>(17), null);
+
+        for (let i = 0; i < branch_num_children; i++) {
+          let branch_index = child_indexes_ascending[i];
+          branch_node_optim.children[branch_index] = child_hash_ptrs[i];
+        }
+
+        let branch_node_obj = new Node(NodeType.Branch, branch_node_optim, null);
+        let branchHashOutputPtr = hashBranchNode(branch_node_optim.children);
+
+
+        Trie.set(branchHashOutputPtr, branch_node_obj);
 
         multiproofStack[stackTop] = branchHashOutputPtr;
         stackTop++;
@@ -285,7 +212,6 @@ export function main(): i32 {
 
       case HASHES:
         // pulls hashes from the input data and puts them on the stack
-        // could be optimized to reduce memory copying done later in BRANCHHASH, but would require a different sequence of opcodes / hashes
         let hashes_operand = (multiproof_opcodes[pc] as i32);
         pc++; // advance pc past hashes operand
         for (let i = 0; i < hashes_operand; i++) {
@@ -310,8 +236,10 @@ export function main(): i32 {
 
   let verifiedPrestateRootBuf = new ArrayBuffer(32);
   // doing memory.copy here because we don't have the reference to the original backing buffer of verified_prestate_root_ptr, only the pointer
+  // TODO: try dereferencing the pointer instead of recreating an arraybuffer
   memory.copy((verifiedPrestateRootBuf as usize), verified_prestate_root_ptr, 32);
   let verified_prestate_root = Uint64Array.wrap(verifiedPrestateRootBuf, 0, 4);
+
 
   // TODO: make helper for hash comparison, and use @inline
   if (  (verified_prestate_root[0] != prestate_root_hash_data[0])
@@ -321,7 +249,340 @@ export function main(): i32 {
     throw new Error('hashes dont match!');
   }
 
-  eth2_savePostStateRoot(verified_prestate_root_ptr);
+
+
+  // INPUT 2: address is another input, also hardcoded for testing.
+  let address_hash = Array.create<u8>(32);
+  // keccak("eb79aa62d6433e0a23efeb3c859eae7b3c74e850")
+  address_hash = [14, 141, 0, 120, 132, 143, 54, 115, 94, 135, 183, 110, 98, 144, 35, 193, 245, 40, 118, 164, 66, 9, 192, 120, 221, 66, 131, 45, 8, 208, 15, 177];
+
+  let key_nibbles = u8ArrToNibbleArr(address_hash);
+  //debug_mem((key_nibbles.buffer as usize) + key_nibbles.byteOffset, key_nibbles.byteLength);
+
+  let new_leaf_account_rlp_array = Array.create<u8>(73);
+  //let new_leaf_account_rlp = new Uint8Array(73);
+  // f8478083ffffffa056e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421a0c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470
+  new_leaf_account_rlp_array = [248, 71, 128, 131, 255, 255, 255, 160, 86, 232, 31, 23, 27, 204, 85, 166, 255, 131, 69, 230, 146, 192, 248, 110, 91, 72, 224, 27, 153, 108, 173, 192, 1, 98, 47, 181, 227, 99, 180, 33, 160, 197, 210, 70, 1, 134, 247, 35, 60, 146, 126, 125, 178, 220, 199, 3, 192, 229, 0, 182, 83, 202, 130, 39, 59, 123, 250, 216, 4, 93, 133, 164, 112];
+
+  let new_leaf_account_rlp = Uint8Array.wrap(new_leaf_account_rlp_array.buffer, 0, 73);
+  //debug_mem((new_leaf_account_rlp.buffer as usize) + new_leaf_account_rlp.byteOffset, new_leaf_account_rlp.byteLength);
+
+
+  insertNewLeafNewBranch(verified_prestate_root_ptr, key_nibbles, new_leaf_account_rlp);
+
+
+  let new_root_ptr = rehashNode(verified_prestate_root_ptr);
+  //debug_mem(new_root_ptr, 32);
+
+
+
+
+
+  eth2_savePostStateRoot(new_root_ptr);
   return 1;
 
 }
+
+
+
+
+function insertNewLeafNewBranch(prestate_root_hash_ptr: usize, new_leaf_key_nibbles: Array<u8>, new_leaf_account_rlp: Uint8Array): void {
+
+  let currentNode = Trie.get(prestate_root_hash_ptr);
+
+  // hash current_node for debug test
+  //let hashOutput = new ArrayBuffer(32);
+  //let hashOutputPtr = changetype<usize>(hashOutput);
+  //debug(8891);
+
+  //let encoded_node = encode(current_node.bodyrlp);
+  //debug(8892);
+
+  //ethash_keccak256(hashOutputPtr, (encoded_node.buffer as usize) + encoded_node.byteOffset, encoded_node.byteLength);
+  //debug(8899);
+  //debug_mem(hashOutputPtr, 32);
+
+
+  // current_node.bodyrlp
+
+  // pathStack could be smaller than 40
+  let pathStack = Array.create<usize>(40);
+  pathStack.push(prestate_root_hash_ptr);
+
+
+
+  for (let k_i=0; k_i<40; k_i++) {
+    let branch_index_i = new_leaf_key_nibbles[k_i];
+
+    if (currentNode.type == NodeType.Leaf) {
+      createNewBranchWhereLeafExists(new_leaf_account_rlp, new_leaf_key_nibbles, k_i, currentNode, pathStack);
+      return;
+    } else if (currentNode.type == NodeType.Branch) {
+      if (currentNode.branchBody.dirty == null) {
+        currentNode.branchBody.dirty = Array.create<u8>(16);
+
+        // setting the dirty flag to an empty array indicates that no children are dity but the branch node itself needs to be rehashed
+        // explanation:
+        //   if the next node is a leaf, then it will be converted into a new child branch node with two leafs underneath it (the existing leaf and the new leaf)
+        //   the new child branch won't be dirty, since it will be created with the new hash
+        //   the current branch (i.e. the parent of the new branch) will have the new hash inserted into the branch index
+      }
+
+      let next_node_in_path_hash_ptr = currentNode.branchBody.children[branch_index_i];
+      // if next_node_in_path_hash_ptr is 0, then the child is empty
+
+      //debug_mem(next_node_in_path_hash_ptr, 32);
+
+
+      if (next_node_in_path_hash_ptr == 0) {
+        // end of path is an already existing branch node
+        // can just insert the leaf into the branch
+        throw new Error('Dont yet handle inserting a leaf into an already existing branch (but its easy) ')
+      }
+
+      pathStack.push(next_node_in_path_hash_ptr);
+      // next node in path is either a leaf or a branch
+      let nextNodeInPath = Trie.get(next_node_in_path_hash_ptr);
+
+      // TODO: we already check this types ni the for loop.. merge the logic?
+      if (nextNodeInPath.type == NodeType.Branch) {
+          // keep walking...
+          currentNode.branchBody.dirty.push(branch_index_i);
+          currentNode = nextNodeInPath;
+        } else if (nextNodeInPath.type == NodeType.Leaf) {
+          // next node is a leaf, and so is last node in the path
+          // next step will create the new branch node
+          currentNode = nextNodeInPath;
+        } else {
+          throw new Error('extension nodes are unimplemented!')
+        }
+
+    } else {
+      throw new Error('extension nodes are unimplemented.')
+    }
+
+  } // end for loop
+
+}
+
+
+
+function createNewBranchWhereLeafExists(new_leaf_account_rlp: Uint8Array, new_key_nibbles: Array<u8>, k_i: u32, existingLeafNode: Node, pathStack: Array<usize>): void {
+  //debug_mem((new_leaf_account_rlp.buffer as usize) + new_leaf_account_rlp.byteOffset, new_leaf_account_rlp.byteLength);
+
+
+  let existing_leaf_key_value = decode(existingLeafNode.leafBody as Uint8Array);
+  let existing_leaf_value = existing_leaf_key_value.children[1].buffer;
+  //debug_mem((existing_leaf_value.buffer as usize) + existing_leaf_value.byteOffset, existing_leaf_value.byteLength);
+
+  let existing_leaf_key_nibbles = uintArrToNibbleArr(existing_leaf_key_value.children[0].buffer);
+  existing_leaf_key_nibbles = removeHexPrefix(existing_leaf_key_nibbles);
+
+  if (new_key_nibbles[k_i] == existing_leaf_key_nibbles[0]) {
+    throw new Error('TODO: handle extension node insertion')
+  }
+
+  // recreate existing leaf
+
+  let new_key_for_existing_leaf_nibbles = existing_leaf_key_nibbles;
+  // first nibble of the existing leaf key becomes its branch index in the new branch
+  let branch_index_for_existing_leaf = new_key_for_existing_leaf_nibbles.shift()
+
+  let new_key_for_existing_leaf = nibbleArrToUintArr(addHexPrefix(new_key_for_existing_leaf_nibbles, true));
+
+
+  let new_node_for_existing_leaf_rlp_children = Array.create<RLPData>(2);
+
+  new_node_for_existing_leaf_rlp_children.push(new RLPData(null, Array.create<RLPData>(0)));
+  new_node_for_existing_leaf_rlp_children.push(new RLPData(null, Array.create<RLPData>(0)));
+  new_node_for_existing_leaf_rlp_children[0].buffer = new_key_for_existing_leaf;
+  new_node_for_existing_leaf_rlp_children[1].buffer = existing_leaf_value;
+  let new_node_for_existing_leaf_rlp = new RLPData(null, new_node_for_existing_leaf_rlp_children);
+  let new_node_for_existing_leaf = encode(new_node_for_existing_leaf_rlp);
+
+  let new_hash_for_existing_leaf_buffer = new ArrayBuffer(32);
+  let new_hash_for_existing_leaf_ptr = changetype<usize>(new_hash_for_existing_leaf_buffer);
+
+  ethash_keccak256(new_hash_for_existing_leaf_ptr, (new_node_for_existing_leaf.buffer as usize) + new_node_for_existing_leaf.byteOffset, new_node_for_existing_leaf.byteLength);
+  //debug_mem(new_hash_for_existing_leaf_ptr, 32);
+
+
+  let new_node_for_existing_leaf_obj = new Node(NodeType.Leaf, null, new_node_for_existing_leaf);
+  Trie.set(new_hash_for_existing_leaf_ptr, new_node_for_existing_leaf_obj);
+
+  // create new leaf
+
+  let branch_index_for_new_leaf = new_key_nibbles[k_i];
+  let key_for_new_leaf = nibbleArrToUintArr(addHexPrefix(new_key_nibbles.slice(k_i+1), true));
+  
+  let node_for_new_leaf_rlp_children = Array.create<RLPData>(2);
+
+  node_for_new_leaf_rlp_children.push(new RLPData(null, Array.create<RLPData>(0)));
+  node_for_new_leaf_rlp_children.push(new RLPData(null, Array.create<RLPData>(0)));
+  node_for_new_leaf_rlp_children[0].buffer = key_for_new_leaf;
+  node_for_new_leaf_rlp_children[1].buffer = new_leaf_account_rlp;
+  let node_for_new_leaf_rlp = new RLPData(null, node_for_new_leaf_rlp_children);
+  let node_for_new_leaf = encode(node_for_new_leaf_rlp);
+
+  let hash_for_new_leaf_buffer = new ArrayBuffer(32);
+  let hash_for_new_leaf_ptr = changetype<usize>(hash_for_new_leaf_buffer);
+
+  ethash_keccak256(hash_for_new_leaf_ptr, (node_for_new_leaf.buffer as usize) + node_for_new_leaf.byteOffset, node_for_new_leaf.byteLength);
+  //debug_mem(hash_for_new_leaf_ptr, 32);
+
+  let node_for_new_leaf_obj = new Node(NodeType.Leaf, null, node_for_new_leaf);
+  Trie.set(hash_for_new_leaf_ptr, node_for_new_leaf_obj);
+
+  // both leafs created. now create new branch node.
+
+  let new_branch_node = new RLPBranchNode(new Array<usize>(17), null);
+
+  new_branch_node.children[branch_index_for_existing_leaf] = new_hash_for_existing_leaf_ptr;
+  new_branch_node.children[branch_index_for_new_leaf] = hash_for_new_leaf_ptr;
+
+
+  let new_branch_hash_ptr = hashBranchNode(new_branch_node.children);
+  let new_branch_node_obj = new Node(NodeType.Branch, new_branch_node, null);
+  Trie.set(new_branch_hash_ptr, new_branch_node_obj);
+
+  // now we have a new branch node. but we need to replace the pointer in the parent branch node
+  // parent branch node previously pointed to a leaf
+  // in the updated trie, it should point to the new branch node
+
+
+  let parent_branch_hash_ptr = pathStack[pathStack.length-2];
+
+  let parentBranchNode = Trie.get(parent_branch_hash_ptr);
+
+  let new_branch_node_parent_index = new_key_nibbles[k_i-1];
+
+  parentBranchNode.branchBody.children[new_branch_node_parent_index] = new_branch_hash_ptr;
+  //Trie.set(parent_branch_hash_ptr, parentBranchNode);
+  // TODO: do we need to reset it with Trie.set?
+
+  return;
+}
+
+
+
+function rehashNode(staleHashPtr: usize): usize {
+  // accepts a hash pointer, returns a pointer to the new hash
+
+  //debug_mem(staleHashPtr, 32);
+  // lookup the new node using the stale hash
+  let node_with_stale_hash = Trie.get(staleHashPtr);
+  if (node_with_stale_hash.type == NodeType.Leaf) {
+    throw new Error('TODO: handle dirty leaf');
+  }
+
+  if (node_with_stale_hash.type == NodeType.Branch) {
+    // recurse on dirty children
+    let dirty_indexes = node_with_stale_hash.branchBody.dirty;
+    if (dirty_indexes == null)  {
+      throw new Error('ERROR: called rehash on a branch node that has no dirty flag');
+    }
+
+    for (let i = 0; i < dirty_indexes.length; i++) {
+      let dirty_i = dirty_indexes[i];
+      let stale_hash_for_dirty_child_ptr = node_with_stale_hash.branchBody.children[dirty_i];
+      let new_hash_for_dirty_child_ptr = rehashNode(stale_hash_for_dirty_child_ptr);
+      node_with_stale_hash.branchBody.children[dirty_i] = new_hash_for_dirty_child_ptr;
+    }
+
+    // if drity_indexes.length == 0, no dirty children (only new children already hashed)
+    // branch node itself needs to be rehashed
+
+    // TODO: check if renaming does a deep copy or shallow
+    //let new_branch_node = node_with_stale_hash;
+
+    // all child hashes have been updated, so clear the dirty flag
+    //node_with_stale_hash.dirty = null
+
+    let new_branch_hash_ptr = hashBranchNode(node_with_stale_hash.branchBody.children);
+
+    Trie.set(new_branch_hash_ptr, node_with_stale_hash);
+    return new_branch_hash_ptr;
+  }
+
+  // TODO: handle extension nodes
+  throw new Error('only branch nodes and leaf nodes are implemented');
+}
+
+
+
+function removeHexPrefix(nib_arr: Array<u8>): Array<u8> {
+  // the hex prefix is merkle-patricia-trie encoding, not RLP
+  if (nib_arr[0] % 2) {
+    return nib_arr.slice(1);
+  } else {
+    return nib_arr.slice(2);
+  }
+}
+
+
+function addHexPrefix(key_nib_arr: Array<u8>, terminator: bool): Array<u8> {
+  if (key_nib_arr.length % 2) {
+    // odd
+    key_nib_arr.unshift(1);
+  } else {
+    // even
+    key_nib_arr.unshift(0);
+    key_nib_arr.unshift(0);
+  }
+
+  if (terminator) {
+    key_nib_arr[0] += 2;
+  }
+
+  return key_nib_arr;
+}
+
+
+
+function u8ArrToNibbleArr(u8_arr: Array<u8>): Array<u8> {
+  var len = u8_arr.length;
+
+  var nib_arr = Array.create<u8>(len * 2); // length is num of hex chars for address_hash
+  // TODO: we might not need to convert the whole thing to nibbles, just enough chars to follow the path to the proof
+
+  let q = 0;
+  for (let i = 0; i < len; i++) {
+    q = i * 2;
+    nib_arr[q] = u8_arr[i] >> 4;
+    q = q + 1;
+    nib_arr[q] = u8_arr[i] % 16;
+  }
+
+  return nib_arr;
+}
+
+
+function uintArrToNibbleArr(uint_arr: Uint8Array): Array<u8> {
+  var len = uint_arr.length;
+
+  var nib_arr = Array.create<u8>(len * 2); // length is num of hex chars for address_hash
+  // TODO: we might not need to convert the whole thing to nibbles, just enough chars to follow the path to the proof
+
+  let q = 0;
+  for (let i = 0; i < len; i++) {
+    q = i * 2;
+    nib_arr[q] = uint_arr[i] >> 4;
+    q = q + 1;
+    nib_arr[q] = uint_arr[i] % 16;
+  }
+
+  return nib_arr;
+}
+
+
+function nibbleArrToUintArr(arr: Array<u8>): Uint8Array {
+  let buf = new Uint8Array(arr.length / 2);
+
+  for (let i = 0; i < buf.length; i++) {
+    let q = i * 2;
+    buf[i] = (arr[q] << 4) + arr[++q];
+  }
+
+  return buf;
+}
+
