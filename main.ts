@@ -132,6 +132,171 @@ let hashOutputPtr = changetype<usize>(hashOutputBuf);
 
       case BRANCHHASH:
         debug(81);
+        // operand = [length_byte, ...branch_indexes]
+        let branch_num_children = (multiproof_opcodes[pc] as i32);
+        pc++; // advance past length byte (number of branch children)
+        // construct RLPData[] for encode()
+        // doesn't need RLPData.buffer, just RLPData.children (RLPData.children = RLPData[])
+        // each child needs RLPData.buffer
+
+        /*
+        let rlp_string_datas: RLPData[] = new Array<RLPData>();
+        for (let i=0; i<testString.length; i++) {
+            let elem_string = new RLPData(stringToBytes(testString[i]), nullRlpData);
+            rlp_string_datas.push(elem_string);
+        }
+        let rlpData = new RLPData(nullUint8Arr, rlp_string_datas);
+        */
+        //let branch_node: RLPData[] = new Array<RLPData>(17);
+        //for (let i = 0; i < branchhash_operand_len; i++) {
+        //  // pop 
+        //  // pass a Uint8Array to branchChild
+        //  let branch_child = new RLPData(, null);
+        //}
+
+        // let's manually construct the encoded branch node, instead of using the RLP library
+        // the length will depend on the number of child hashes
+        /*
+        // here's an encoded branch node with 4 child hashes:
+        f891808080808080a09f48e0438e53d55e53bb935c4a80e294ff56055cc4b584635b4bafbf894226088080a04216caf9df3c72b105e86b5b75ecb16e09e4a6a718bb27b0b83ec6fd79bb6c0c80a0e17ee4374bd5002160209877201836362b93a75ce5813bf4789053dd613d22e08080a0b82fb32a26c22edc12788287a7d157a5be2443a4ea2a0722c77f5b995ef40d038080
+        // it's 147 bytes. the 4 children are 32 * 4 == 128 bytes
+        // the branch node is an RLP list of 17 elements, so 13 elements are empty. an empty element is `80`, so that's 13 bytes. 128 + 13 = 141 bytes.
+        // that leaves 6 bytes for encoding (2 for 0xf891, 4 of 0xa0)
+        f8 ;; RLP list over 55 bytes. length of byte length is (0xf8 - 0xf7 = 1)
+        91 ;; list length = 145
+        80 ;; branch index 0
+        80 ;; 1
+        80 ;; 2
+        80 ;; branch index 3
+        80 ;; branch index 4
+        80 ;; branch index 5
+        a0 ;; length of string is (0xa0 - 0x80) = 32
+        9f48e0438e53d55e53bb935c4a80e294ff56055cc4b584635b4bafbf89422608 ;; hash at branch index 6
+        80 ;; branch index 7
+        80 ;; branch index 8
+        a0 ;; length of string
+        4216caf9df3c72b105e86b5b75ecb16e09e4a6a718bb27b0b83ec6fd79bb6c0c ;; branch index 9
+        80 ;; branch index a
+        a0
+        e17ee4374bd5002160209877201836362b93a75ce5813bf4789053dd613d22e0 ;; branch index b
+        80 ;; c
+        80 ;; d
+        a0
+        b82fb32a26c22edc12788287a7d157a5be2443a4ea2a0722c77f5b995ef40d03 ;; branch index e
+        80 ;; f
+        80 ;; 17th element
+        */
+
+        // branch node will always have at least 2 children, so its length will always be at least 64 bytes
+        // first byte of a branch node will be either f8 (<= 7 children) or f9 (>= 8 children)
+        // two children: length is 81 bytes (0x51)
+        // three children: length is 113 bytes (0x71)
+        // four children: length is 145 bytes (0x91)
+        // five children: length is 177 bytes (0xb1)
+
+        // bytes for hashes = len(0xa0 + hash) = 33*branch_num_children
+        // bytes for empty nodes (0x80) = (17 - branch_num_children)
+        let list_bytes_len = (33 * branch_num_children) + (17 - branch_num_children);
+        let branch_node_bytes: usize;
+        let branch_node_datastart: usize;
+        debug(5555);
+        if (branch_num_children < 8) {
+          //0xf8 + (list_len as u8) + bytes..
+          branch_node_bytes = changetype<usize>(new ArrayBuffer(list_bytes_len + 2));
+          store<u8>(branch_node_bytes, 0xf8);
+          store<u16>(branch_node_bytes + 1, (list_bytes_len as u8));
+          debug_mem(branch_node_bytes);
+          branch_node_datastart = branch_node_bytes + 2;
+        } else {
+          //0xf9 + (list_len as u16) + bytes..
+          branch_node_bytes = changetype<usize>(new ArrayBuffer(list_bytes_len + 3));
+          store<u8>(branch_node_bytes, 0xf9);
+          store<u16>(branch_node_bytes + 1, (list_bytes_len as u16));
+          debug_mem(branch_node_bytes);
+          branch_node_datastart = branch_node_bytes + 3;
+        }
+
+        // TODO: try `memory.fill(branch_node_bytes, 128, list_bytes_len)`` then overwrite where hashes are
+        /*
+        memory.fill(branch_node_datastart, 128, list_bytes_len);
+        for (let i = 0; i < branch_num_children; i++) {
+          branch_node_datastart
+        }
+        */
+
+
+        // could create a DataView to read the operand bytes (branch child indexes), but guess that would be more overhead.
+        // do it manually with pc++
+
+        // first child
+        let next_child = (multiproof_opcodes[pc] as u8);
+        pc++; // should advance pc only branch_num_children times
+
+        debug(5566);
+        debug(next_child);
+
+        let children_copied = 0;
+        //let all_children_copied = false;
+
+        let branch_node_offset = branch_node_datastart;
+        let i: u8 = 0;
+        while (i < 17) {
+
+          if (children_copied < branch_num_children) {
+            // first insert all the 0x80's for empty slots
+            if (i < next_child) {
+              // TODO: maybe the check isn't necessary if memory.fill accepts 0 length inputs
+
+              let num_empties = next_child - i;
+              // first fill the empties with 0x80
+              memory.fill(branch_node_offset, 0x80, num_empties);
+              branch_node_offset = branch_node_offset + num_empties;
+
+              debug(5577);
+              debug_mem(branch_node_offset - 32);
+              i = next_child;
+            }
+
+            // now copy the child
+
+            // pop child hash off the stack
+            stackTop--;
+            let child_hash_ptr = multiproofStack[stackTop];
+
+            // read next child index
+            next_child = (multiproof_opcodes[pc] as u8);
+            pc++; // on last child, this advances pc++ to the next opcode
+            children_copied++;
+
+            // insert 0xa0 byte and copy the child hash
+            store<u8>(branch_node_offset, 0xa0);
+            branch_node_offset++;
+            memory.copy(branch_node_offset, child_hash_ptr, 32);
+            branch_node_offset = branch_node_offset + 32;
+
+            debug(5588);
+            debug_mem(branch_node_offset - 32);
+          } else {
+            // we've copied all children and still haven't filled all 17 slots
+            // copy empties to the end
+            let num_empties = 17 - (i + 1);
+            memory.fill(branch_node_offset, 0x80, num_empties);
+            branch_node_offset = branch_node_offset + num_empties;
+            debug(5599);
+            debug_mem(branch_node_offset - 32);
+            break;
+          }
+
+          i = i + 1;
+        }
+
+        // branch node is constructed, now hash it and push hash back on stack
+        
+
+
+        //for (let i = 0; i < branchhash_operand_len; i++) {
+          // pop 
+        //}
         // TODO: pop hashes from `multiproofStack` and construct branch node
         break;
 
