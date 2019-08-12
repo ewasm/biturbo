@@ -108,6 +108,7 @@ export function main(): i32 {
 
 
       /*
+      // this BRANCHHASH uses rlp.ts to encode the branch nodes
       case BRANCHHASH:
         // construct RLPData[] for encode()
         // doesn't need RLPData.buffer, just RLPData.children (RLPData.children = RLPData[])
@@ -128,6 +129,7 @@ export function main(): i32 {
       */
 
 
+      // this BRANCHHASH manually encodes the branch nodes
       case BRANCHHASH:
         // operand = [branch_num_children, ...branch_indexes]
         let branch_num_children = (multiproof_opcodes[pc] as i32);
