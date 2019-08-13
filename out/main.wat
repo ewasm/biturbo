@@ -17,8 +17,6 @@
  (import "env" "eth2_loadPreStateRoot" (func $main/eth2_loadPreStateRoot (param i32)))
  (import "env" "eth2_savePostStateRoot" (func $main/eth2_savePostStateRoot (param i32)))
  (import "watimports" "$ethash_keccak256" (func $keccak/ethash_keccak256 (param i32 i32 i32)))
- (import "env" "debug_log" (func $rlp/debug (param i32)))
- (import "env" "debug_mem" (func $rlp/debug_mem (param i32 i32)))
  (memory $0 1)
  (data (i32.const 10000) " \00\00\00\01\00\00\00\01\00\00\00 \00\00\000\001\002\003\004\005\006\007\008\009\00a\00b\00c\00d\00e\00f")
  (data (i32.const 10052) "\01\00\00\00\01")
@@ -44,7 +42,7 @@
  (export "eth2_savePostStateRoot" (func $main/eth2_savePostStateRoot))
  (export "main" (func $main/main))
  (start $start)
- (func $~lib/rt/stub/__alloc (; 9 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
+ (func $~lib/rt/stub/__alloc (; 7 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
   (local $2 i32)
   (local $3 i32)
   (local $4 i32)
@@ -118,7 +116,7 @@
   i32.store offset=12
   local.get $3
  )
- (func $~lib/memory/memory.fill (; 10 ;) (type $FUNCSIG$viii) (param $0 i32) (param $1 i32) (param $2 i32)
+ (func $~lib/memory/memory.fill (; 8 ;) (type $FUNCSIG$viii) (param $0 i32) (param $1 i32) (param $2 i32)
   (local $3 i32)
   (local $4 i64)
   block $~lib/util/memory/memset|inlined.0
@@ -342,7 +340,7 @@
    end
   end
  )
- (func $~lib/arraybuffer/ArrayBuffer#constructor (; 11 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $~lib/arraybuffer/ArrayBuffer#constructor (; 9 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   (local $1 i32)
   local.get $0
   i32.const 1073741808
@@ -359,7 +357,7 @@
   call $~lib/memory/memory.fill
   local.get $1
  )
- (func $~lib/map/Map<usize,main/Node>#clear (; 12 ;) (type $FUNCSIG$vi) (param $0 i32)
+ (func $~lib/map/Map<usize,main/Node>#clear (; 10 ;) (type $FUNCSIG$vi) (param $0 i32)
   (local $1 i32)
   i32.const 16
   call $~lib/arraybuffer/ArrayBuffer#constructor
@@ -392,7 +390,7 @@
   i32.const 0
   i32.store offset=20
  )
- (func $~lib/map/Map<usize,main/Node>#constructor (; 13 ;) (type $FUNCSIG$i) (result i32)
+ (func $~lib/map/Map<usize,main/Node>#constructor (; 11 ;) (type $FUNCSIG$i) (result i32)
   (local $0 i32)
   i32.const 24
   i32.const 8
@@ -419,13 +417,13 @@
   call $~lib/map/Map<usize,main/Node>#clear
   local.get $0
  )
- (func $~lib/arraybuffer/ArrayBuffer#get:byteLength (; 14 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $~lib/arraybuffer/ArrayBuffer#get:byteLength (; 12 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   local.get $0
   i32.const 16
   i32.sub
   i32.load offset=12
  )
- (func $~lib/typedarray/Uint64Array.wrap (; 15 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $~lib/typedarray/Uint64Array.wrap (; 13 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   (local $1 i32)
   (local $2 i32)
   block $folding-inner0
@@ -459,7 +457,7 @@
   end
   unreachable
  )
- (func $~lib/typedarray/Uint8Array.wrap (; 16 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
+ (func $~lib/typedarray/Uint8Array.wrap (; 14 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
   (local $2 i32)
   (local $3 i32)
   block $folding-inner0
@@ -510,7 +508,7 @@
   end
   unreachable
  )
- (func $~lib/typedarray/Uint8Array#__get (; 17 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
+ (func $~lib/typedarray/Uint8Array#__get (; 15 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
   local.get $1
   local.get $0
   i32.load offset=8
@@ -524,7 +522,7 @@
   i32.add
   i32.load8_u
  )
- (func $rlp/Decoded#constructor (; 18 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
+ (func $rlp/Decoded#constructor (; 16 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
   (local $2 i32)
   i32.const 8
   i32.const 12
@@ -549,7 +547,7 @@
   i32.store offset=4
   local.get $2
  )
- (func $~lib/arraybuffer/ArrayBufferView#constructor (; 19 ;) (type $FUNCSIG$iiii) (param $0 i32) (param $1 i32) (param $2 i32) (result i32)
+ (func $~lib/arraybuffer/ArrayBufferView#constructor (; 17 ;) (type $FUNCSIG$iiii) (param $0 i32) (param $1 i32) (param $2 i32) (result i32)
   local.get $1
   i32.const 1073741808
   local.get $2
@@ -599,7 +597,7 @@
   i32.store offset=8
   local.get $0
  )
- (func $~lib/typedarray/Uint8Array#constructor (; 20 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $~lib/typedarray/Uint8Array#constructor (; 18 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   i32.const 12
   i32.const 7
   call $~lib/rt/stub/__alloc
@@ -607,7 +605,7 @@
   i32.const 0
   call $~lib/arraybuffer/ArrayBufferView#constructor
  )
- (func $rlp/RLPData#constructor (; 21 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
+ (func $rlp/RLPData#constructor (; 19 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
   (local $2 i32)
   local.get $0
   if
@@ -670,7 +668,7 @@
   end
   local.get $2
  )
- (func $~lib/typedarray/Uint8Array#subarray (; 22 ;) (type $FUNCSIG$iiii) (param $0 i32) (param $1 i32) (param $2 i32) (result i32)
+ (func $~lib/typedarray/Uint8Array#subarray (; 20 ;) (type $FUNCSIG$iiii) (param $0 i32) (param $1 i32) (param $2 i32) (result i32)
   (local $3 i32)
   (local $4 i32)
   local.get $0
@@ -753,7 +751,7 @@
   i32.store offset=8
   local.get $1
  )
- (func $~lib/string/String#get:length (; 23 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $~lib/string/String#get:length (; 21 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   local.get $0
   i32.const 16
   i32.sub
@@ -761,7 +759,7 @@
   i32.const 1
   i32.shr_u
  )
- (func $~lib/string/String#charAt (; 24 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $~lib/string/String#charAt (; 22 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   (local $1 i32)
   local.get $0
   i32.const 10016
@@ -784,7 +782,7 @@
   i32.store16
   local.get $1
  )
- (func $~lib/memory/memory.copy (; 25 ;) (type $FUNCSIG$viii) (param $0 i32) (param $1 i32) (param $2 i32)
+ (func $~lib/memory/memory.copy (; 23 ;) (type $FUNCSIG$viii) (param $0 i32) (param $1 i32) (param $2 i32)
   (local $3 i32)
   (local $4 i32)
   block $~lib/util/memory/memmove|inlined.0
@@ -959,7 +957,7 @@
    end
   end
  )
- (func $~lib/rt/stub/__realloc (; 26 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
+ (func $~lib/rt/stub/__realloc (; 24 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
   (local $2 i32)
   (local $3 i32)
   local.get $1
@@ -988,7 +986,7 @@
   end
   local.get $0
  )
- (func $~lib/array/ensureSize (; 27 ;) (type $FUNCSIG$viii) (param $0 i32) (param $1 i32) (param $2 i32)
+ (func $~lib/array/ensureSize (; 25 ;) (type $FUNCSIG$viii) (param $0 i32) (param $1 i32) (param $2 i32)
   (local $3 i32)
   (local $4 i32)
   local.get $1
@@ -1039,7 +1037,7 @@
    i32.store offset=8
   end
  )
- (func $~lib/array/Array<~lib/string/String>#push (; 28 ;) (type $FUNCSIG$vii) (param $0 i32) (param $1 i32)
+ (func $~lib/array/Array<~lib/string/String>#push (; 26 ;) (type $FUNCSIG$vii) (param $0 i32) (param $1 i32)
   (local $2 i32)
   (local $3 i32)
   local.get $0
@@ -1063,7 +1061,7 @@
   local.get $3
   i32.store offset=12
  )
- (func $~lib/array/Array<~lib/string/String>#reverse (; 29 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $~lib/array/Array<~lib/string/String>#reverse (; 27 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   (local $1 i32)
   (local $2 i32)
   (local $3 i32)
@@ -1112,7 +1110,7 @@
   end
   local.get $0
  )
- (func $~lib/array/Array<~lib/string/String>#join_str (; 30 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $~lib/array/Array<~lib/string/String>#join_str (; 28 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   (local $1 i32)
   (local $2 i32)
   (local $3 i32)
@@ -1269,7 +1267,7 @@
   end
   local.get $2
  )
- (func $~lib/string/String#concat (; 31 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $~lib/string/String#concat (; 29 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   (local $1 i32)
   (local $2 i32)
   (local $3 i32)
@@ -1310,7 +1308,7 @@
   call $~lib/memory/memory.copy
   local.get $1
  )
- (func $rlp/intToHex (; 32 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $rlp/intToHex (; 30 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   (local $1 i32)
   (local $2 i32)
   i32.const 16
@@ -1355,7 +1353,7 @@
    local.get $0
   end
  )
- (func $~lib/string/String#charCodeAt (; 33 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
+ (func $~lib/string/String#charCodeAt (; 31 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
   local.get $1
   local.get $0
   call $~lib/string/String#get:length
@@ -1371,7 +1369,7 @@
   i32.add
   i32.load16_u
  )
- (func $~lib/typedarray/Uint8Array#__set (; 34 ;) (type $FUNCSIG$viii) (param $0 i32) (param $1 i32) (param $2 i32)
+ (func $~lib/typedarray/Uint8Array#__set (; 32 ;) (type $FUNCSIG$viii) (param $0 i32) (param $1 i32) (param $2 i32)
   local.get $1
   local.get $0
   i32.load offset=8
@@ -1386,14 +1384,14 @@
   local.get $2
   i32.store8
  )
- (func $~lib/arraybuffer/ArrayBufferView#get:byteOffset (; 35 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $~lib/arraybuffer/ArrayBufferView#get:byteOffset (; 33 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   local.get $0
   i32.load offset=4
   local.get $0
   i32.load
   i32.sub
  )
- (func $~lib/string/String.UTF8.decodeUnsafe (; 36 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
+ (func $~lib/string/String.UTF8.decodeUnsafe (; 34 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
   (local $2 i32)
   (local $3 i32)
   (local $4 i32)
@@ -1584,7 +1582,7 @@
   i32.sub
   call $~lib/rt/stub/__realloc
  )
- (func $rlp/bytesToHex (; 37 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $rlp/bytesToHex (; 35 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   (local $1 i32)
   (local $2 i32)
   (local $3 i32)
@@ -1638,7 +1636,7 @@
   i32.load offset=8
   call $~lib/string/String.UTF8.decodeUnsafe
  )
- (func $~lib/string/String#slice (; 38 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $~lib/string/String#slice (; 36 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   (local $1 i32)
   (local $2 i32)
   (local $3 i32)
@@ -1682,7 +1680,7 @@
   call $~lib/memory/memory.copy
   local.get $3
  )
- (func $~lib/util/string/compareImpl (; 39 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
+ (func $~lib/util/string/compareImpl (; 37 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
   (local $2 i32)
   (local $3 i32)
   i32.const 10128
@@ -1718,7 +1716,7 @@
   end
   local.get $3
  )
- (func $~lib/string/String.__eq (; 40 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $~lib/string/String.__eq (; 38 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   (local $1 i32)
   local.get $0
   i32.const 10128
@@ -1748,7 +1746,7 @@
   end
   i32.const 0
  )
- (func $~lib/util/string/isSpace (; 41 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $~lib/util/string/isSpace (; 39 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   local.get $0
   i32.const 255
   i32.le_s
@@ -1840,7 +1838,7 @@
   end
   i32.const 0
  )
- (func $~lib/util/string/strtol<i32> (; 42 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $~lib/util/string/strtol<i32> (; 40 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   (local $1 i32)
   (local $2 i32)
   (local $3 i32)
@@ -1990,7 +1988,7 @@
   end
   i32.const 0
  )
- (func $rlp/safeParseInt (; 43 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $rlp/safeParseInt (; 41 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   local.get $0
   call $~lib/string/String#slice
   call $~lib/string/String.__eq
@@ -2000,7 +1998,7 @@
   local.get $0
   call $~lib/util/string/strtol<i32>
  )
- (func $~lib/rt/__allocArray (; 44 ;) (type $FUNCSIG$iiiii) (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (result i32)
+ (func $~lib/rt/__allocArray (; 42 ;) (type $FUNCSIG$iiiii) (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (result i32)
   (local $4 i32)
   i32.const 16
   local.get $2
@@ -2032,7 +2030,7 @@
   end
   local.get $2
  )
- (func $rlp/_decode (; 45 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $rlp/_decode (; 43 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   (local $1 i32)
   (local $2 i32)
   (local $3 i32)
@@ -2271,7 +2269,7 @@
    end
   end
  )
- (func $rlp/decode (; 46 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $rlp/decode (; 44 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   local.get $0
   call $rlp/_decode
   local.tee $0
@@ -2283,7 +2281,7 @@
   local.get $0
   i32.load
  )
- (func $~lib/array/Array<rlp/RLPData>#__get (; 47 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
+ (func $~lib/array/Array<rlp/RLPData>#__get (; 45 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
   local.get $1
   local.get $0
   i32.load offset=12
@@ -2308,7 +2306,7 @@
   i32.add
   i32.load
  )
- (func $main/Node#constructor (; 48 ;) (type $FUNCSIG$iiii) (param $0 i32) (param $1 i32) (param $2 i32) (result i32)
+ (func $main/Node#constructor (; 46 ;) (type $FUNCSIG$iiii) (param $0 i32) (param $1 i32) (param $2 i32) (result i32)
   (local $3 i32)
   i32.const 12
   i32.const 3
@@ -2324,7 +2322,7 @@
   i32.store offset=8
   local.get $3
  )
- (func $~lib/util/hash/hash32 (; 49 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $~lib/util/hash/hash32 (; 47 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   local.get $0
   i32.const 255
   i32.and
@@ -2355,7 +2353,7 @@
   i32.const 16777619
   i32.mul
  )
- (func $~lib/map/Map<usize,main/Node>#find (; 50 ;) (type $FUNCSIG$iiii) (param $0 i32) (param $1 i32) (param $2 i32) (result i32)
+ (func $~lib/map/Map<usize,main/Node>#find (; 48 ;) (type $FUNCSIG$iiii) (param $0 i32) (param $1 i32) (param $2 i32) (result i32)
   local.get $0
   i32.load
   local.get $0
@@ -2398,7 +2396,7 @@
   end
   i32.const 0
  )
- (func $~lib/map/Map<usize,main/Node>#rehash (; 51 ;) (type $FUNCSIG$vii) (param $0 i32) (param $1 i32)
+ (func $~lib/map/Map<usize,main/Node>#rehash (; 49 ;) (type $FUNCSIG$vii) (param $0 i32) (param $1 i32)
   (local $2 i32)
   (local $3 i32)
   (local $4 i32)
@@ -2505,7 +2503,7 @@
   i32.load offset=20
   i32.store offset=16
  )
- (func $~lib/map/Map<usize,main/Node>#set (; 52 ;) (type $FUNCSIG$viii) (param $0 i32) (param $1 i32) (param $2 i32)
+ (func $~lib/map/Map<usize,main/Node>#set (; 50 ;) (type $FUNCSIG$viii) (param $0 i32) (param $1 i32) (param $2 i32)
   (local $3 i32)
   (local $4 i32)
   (local $5 i32)
@@ -2601,7 +2599,7 @@
    i32.store
   end
  )
- (func $~lib/typedarray/Uint32Array#__set (; 53 ;) (type $FUNCSIG$viii) (param $0 i32) (param $1 i32) (param $2 i32)
+ (func $~lib/typedarray/Uint32Array#__set (; 51 ;) (type $FUNCSIG$viii) (param $0 i32) (param $1 i32) (param $2 i32)
   local.get $1
   local.get $0
   i32.load offset=8
@@ -2620,7 +2618,7 @@
   local.get $2
   i32.store
  )
- (func $~lib/array/Array<u8>#constructor (; 54 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $~lib/array/Array<u8>#constructor (; 52 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   (local $1 i32)
   i32.const 16
   i32.const 6
@@ -2636,7 +2634,7 @@
   i32.store offset=12
   local.get $1
  )
- (func $~lib/array/Array<u8>#__set (; 55 ;) (type $FUNCSIG$viii) (param $0 i32) (param $1 i32) (param $2 i32)
+ (func $~lib/array/Array<u8>#__set (; 53 ;) (type $FUNCSIG$viii) (param $0 i32) (param $1 i32) (param $2 i32)
   (local $3 i32)
   local.get $0
   i32.load offset=12
@@ -2664,7 +2662,7 @@
    i32.store offset=12
   end
  )
- (func $~lib/array/Array<usize>#constructor (; 56 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $~lib/array/Array<usize>#constructor (; 54 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   (local $1 i32)
   i32.const 16
   i32.const 5
@@ -2680,7 +2678,7 @@
   i32.store offset=12
   local.get $1
  )
- (func $~lib/typedarray/Uint32Array#__get (; 57 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
+ (func $~lib/typedarray/Uint32Array#__get (; 55 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
   local.get $1
   local.get $0
   i32.load offset=8
@@ -2698,7 +2696,7 @@
   i32.add
   i32.load
  )
- (func $~lib/array/Array<usize>#__set (; 58 ;) (type $FUNCSIG$viii) (param $0 i32) (param $1 i32) (param $2 i32)
+ (func $~lib/array/Array<usize>#__set (; 56 ;) (type $FUNCSIG$viii) (param $0 i32) (param $1 i32) (param $2 i32)
   (local $3 i32)
   local.get $0
   i32.load offset=12
@@ -2728,30 +2726,7 @@
    i32.store offset=12
   end
  )
- (func $~lib/array/Array.create<rlp/RLPData> (; 59 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
-  local.get $0
-  i32.const 268435452
-  i32.gt_u
-  if
-   unreachable
-  end
-  local.get $0
-  i32.const 2
-  i32.const 11
-  i32.const 0
-  call $~lib/rt/__allocArray
-  local.tee $0
-  i32.const 0
-  i32.store offset=12
-  local.get $0
-  i32.load offset=4
-  i32.const 0
-  local.get $0
-  i32.load offset=8
-  call $~lib/memory/memory.fill
-  local.get $0
- )
- (func $rlp/RLPBranchNode#constructor (; 60 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $rlp/RLPBranchNode#constructor (; 57 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   (local $1 i32)
   i32.const 8
   i32.const 4
@@ -2764,498 +2739,7 @@
   i32.store offset=4
   local.get $1
  )
- (func $~lib/array/Array<rlp/RLPData>#__set (; 61 ;) (type $FUNCSIG$viii) (param $0 i32) (param $1 i32) (param $2 i32)
-  (local $3 i32)
-  (local $4 i32)
-  local.get $1
-  local.get $0
-  i32.load offset=12
-  local.tee $3
-  i32.gt_u
-  if
-   unreachable
-  end
-  local.get $0
-  local.get $1
-  i32.const 1
-  i32.add
-  i32.const 2
-  call $~lib/array/ensureSize
-  local.get $0
-  i32.load offset=4
-  local.get $1
-  i32.const 2
-  i32.shl
-  i32.add
-  local.tee $4
-  i32.load
-  local.get $2
-  i32.ne
-  if
-   local.get $4
-   local.get $2
-   i32.store
-  end
-  local.get $1
-  local.get $3
-  i32.ge_s
-  if
-   local.get $0
-   local.get $1
-   i32.const 1
-   i32.add
-   i32.store offset=12
-  end
- )
- (func $rlp/concatUint8Arrays~anonymous|0 (; 62 ;) (type $FUNCSIG$iiiii) (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (result i32)
-  local.get $1
-  i32.load offset=8
-  local.get $0
-  i32.add
- )
- (func $~lib/array/Array<~lib/typedarray/Uint8Array>#reduce<u32> (; 63 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  (local $4 i32)
-  local.get $0
-  i32.load offset=12
-  local.set $3
-  loop $loop|0
-   local.get $1
-   local.get $3
-   local.get $0
-   i32.load offset=12
-   local.tee $4
-   local.get $3
-   local.get $4
-   i32.lt_s
-   select
-   i32.lt_s
-   if
-    i32.const 4
-    global.set $~lib/argc
-    local.get $2
-    local.get $0
-    i32.load offset=4
-    local.get $1
-    i32.const 2
-    i32.shl
-    i32.add
-    i32.load
-    local.get $1
-    local.get $0
-    call $rlp/concatUint8Arrays~anonymous|0
-    local.set $2
-    local.get $1
-    i32.const 1
-    i32.add
-    local.set $1
-    br $loop|0
-   end
-  end
-  local.get $2
- )
- (func $rlp/concatUint8Arrays (; 64 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  local.get $0
-  call $~lib/array/Array<~lib/typedarray/Uint8Array>#reduce<u32>
-  call $~lib/typedarray/Uint8Array#constructor
-  local.set $2
-  loop $loop|0
-   local.get $1
-   local.get $0
-   i32.load offset=12
-   i32.lt_s
-   if
-    local.get $2
-    i32.load
-    local.get $2
-    call $~lib/arraybuffer/ArrayBufferView#get:byteOffset
-    i32.add
-    local.get $3
-    i32.add
-    local.get $0
-    local.get $1
-    call $~lib/array/Array<rlp/RLPData>#__get
-    i32.load
-    local.get $0
-    i32.const 1
-    call $~lib/array/Array<rlp/RLPData>#__get
-    call $~lib/arraybuffer/ArrayBufferView#get:byteOffset
-    i32.add
-    local.get $0
-    local.get $1
-    call $~lib/array/Array<rlp/RLPData>#__get
-    i32.load offset=8
-    call $~lib/memory/memory.copy
-    local.get $0
-    local.get $1
-    call $~lib/array/Array<rlp/RLPData>#__get
-    i32.load offset=8
-    local.get $3
-    i32.add
-    local.set $3
-    local.get $1
-    i32.const 1
-    i32.add
-    local.set $1
-    br $loop|0
-   end
-  end
-  local.get $2
- )
- (func $~lib/dataview/DataView#constructor (; 65 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
-  (local $1 i32)
-  i32.const 2
-  local.get $0
-  call $~lib/arraybuffer/ArrayBuffer#get:byteLength
-  i32.gt_u
-  if
-   unreachable
-  end
-  i32.const 12
-  i32.const 17
-  call $~lib/rt/stub/__alloc
-  local.tee $1
-  i32.const 0
-  i32.store
-  local.get $1
-  i32.const 0
-  i32.store offset=4
-  local.get $1
-  i32.const 0
-  i32.store offset=8
-  local.get $1
-  i32.load
-  drop
-  local.get $1
-  local.get $0
-  i32.store
-  local.get $1
-  local.get $0
-  i32.store offset=4
-  local.get $1
-  i32.const 2
-  i32.store offset=8
-  local.get $1
- )
- (func $~lib/polyfills/bswap<u16> (; 66 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
-  local.get $0
-  i32.const 8
-  i32.shl
-  local.get $0
-  i32.const 65535
-  i32.and
-  i32.const 8
-  i32.shr_u
-  i32.or
- )
- (func $~lib/dataview/DataView#setUint16 (; 67 ;) (type $FUNCSIG$vii) (param $0 i32) (param $1 i32)
-  i32.const 2
-  local.get $0
-  i32.load offset=8
-  i32.gt_s
-  if
-   unreachable
-  end
-  local.get $0
-  i32.load offset=4
-  local.get $1
-  call $~lib/polyfills/bswap<u16>
-  i32.store16
- )
- (func $rlp/concatUint8Array (; 68 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
-  (local $2 i32)
-  local.get $0
-  i32.load offset=8
-  local.get $1
-  i32.load offset=8
-  i32.add
-  call $~lib/typedarray/Uint8Array#constructor
-  local.tee $2
-  i32.load
-  local.get $2
-  call $~lib/arraybuffer/ArrayBufferView#get:byteOffset
-  i32.add
-  local.get $0
-  i32.load
-  local.get $0
-  call $~lib/arraybuffer/ArrayBufferView#get:byteOffset
-  i32.add
-  local.get $0
-  i32.load offset=8
-  call $~lib/memory/memory.copy
-  local.get $2
-  i32.load
-  local.get $2
-  call $~lib/arraybuffer/ArrayBufferView#get:byteOffset
-  i32.add
-  local.get $0
-  i32.load offset=8
-  i32.add
-  local.get $1
-  i32.load
-  local.get $1
-  call $~lib/arraybuffer/ArrayBufferView#get:byteOffset
-  i32.add
-  local.get $1
-  i32.load offset=8
-  call $~lib/memory/memory.copy
-  local.get $2
- )
- (func $rlp/encodeLength (; 69 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
-  (local $2 i32)
-  local.get $0
-  i32.const 56
-  i32.lt_u
-  if (result i32)
-   i32.const 55
-   call $rlp/debug
-   local.get $0
-   local.get $1
-   i32.add
-   local.tee $0
-   call $rlp/debug
-   local.get $0
-   i32.const 256
-   i32.lt_u
-   if
-    i32.const 1
-    call $~lib/typedarray/Uint8Array#constructor
-    local.tee $1
-    i32.const 0
-    local.get $0
-    i32.const 255
-    i32.and
-    call $~lib/typedarray/Uint8Array#__set
-    local.get $1
-    return
-   end
-   local.get $0
-   i32.const 65536
-   i32.lt_u
-   if
-    i32.const 2
-    call $~lib/typedarray/Uint8Array#constructor
-    local.tee $1
-    i32.load
-    call $~lib/dataview/DataView#constructor
-    local.get $0
-    call $~lib/dataview/DataView#setUint16
-    local.get $1
-    return
-   end
-   unreachable
-  else   
-   i32.const 56
-   call $rlp/debug
-   i32.const 561
-   call $rlp/debug
-   local.get $0
-   call $rlp/debug
-   local.get $0
-   i32.const 256
-   i32.lt_u
-   if (result i32)
-    i32.const 1
-    call $~lib/typedarray/Uint8Array#constructor
-    local.tee $2
-    i32.const 0
-    local.get $0
-    i32.const 255
-    i32.and
-    call $~lib/typedarray/Uint8Array#__set
-    i32.const 1
-   else    
-    local.get $0
-    i32.const 65536
-    i32.lt_u
-    if
-     i32.const 2
-     call $~lib/typedarray/Uint8Array#constructor
-     local.tee $2
-     i32.load
-     call $~lib/dataview/DataView#constructor
-     local.get $0
-     call $~lib/dataview/DataView#setUint16
-    else     
-     unreachable
-    end
-    i32.const 2
-   end
-   local.set $0
-   i32.const 562
-   call $rlp/debug
-   local.get $1
-   i32.const 55
-   i32.add
-   local.get $0
-   i32.add
-   local.tee $1
-   call $rlp/debug
-   local.get $1
-   i32.const 256
-   i32.lt_u
-   if
-    i32.const 1
-    call $~lib/typedarray/Uint8Array#constructor
-    local.tee $0
-    i32.const 0
-    local.get $1
-    i32.const 255
-    i32.and
-    call $~lib/typedarray/Uint8Array#__set
-   else    
-    local.get $1
-    i32.const 65536
-    i32.lt_u
-    if
-     i32.const 2
-     call $~lib/typedarray/Uint8Array#constructor
-     local.tee $0
-     i32.load
-     call $~lib/dataview/DataView#constructor
-     local.get $1
-     call $~lib/dataview/DataView#setUint16
-    else     
-     unreachable
-    end
-   end
-   local.get $0
-   local.get $2
-   call $rlp/concatUint8Array
-  end
- )
- (func $rlp/encode (; 70 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  i32.const 202020
-  call $rlp/debug
-  local.get $0
-  i32.load offset=4
-  i32.load offset=12
-  if (result i32)
-   i32.const 21
-   call $rlp/debug
-   i32.const 16
-   i32.const 16
-   call $~lib/rt/stub/__alloc
-   i32.const 0
-   i32.const 2
-   call $~lib/arraybuffer/ArrayBufferView#constructor
-   local.tee $1
-   i32.const 0
-   i32.store offset=12
-   local.get $1
-   i32.const 0
-   i32.store offset=12
-   loop $loop|0
-    local.get $2
-    local.get $0
-    i32.load offset=4
-    i32.load offset=12
-    i32.lt_s
-    if
-     i32.const 22
-     call $rlp/debug
-     local.get $2
-     call $rlp/debug
-     local.get $1
-     local.get $0
-     i32.load offset=4
-     local.get $2
-     call $~lib/array/Array<rlp/RLPData>#__get
-     call $rlp/encode
-     call $~lib/array/Array<~lib/string/String>#push
-     local.get $2
-     i32.const 1
-     i32.add
-     local.set $2
-     br $loop|0
-    end
-   end
-   local.get $1
-   call $rlp/concatUint8Arrays
-   local.tee $0
-   i32.load offset=8
-   i32.const 192
-   call $rlp/encodeLength
-   local.get $0
-   call $rlp/concatUint8Array
-  else   
-   i32.const 23
-   call $rlp/debug
-   local.get $0
-   i32.load
-   i32.load
-   local.get $0
-   i32.load
-   call $~lib/arraybuffer/ArrayBufferView#get:byteOffset
-   i32.add
-   local.get $0
-   i32.load
-   i32.load offset=8
-   call $rlp/debug_mem
-   local.get $0
-   i32.load
-   i32.load offset=8
-   i32.const 1
-   i32.eq
-   if (result i32)
-    local.get $0
-    i32.load
-    i32.const 0
-    call $~lib/typedarray/Uint8Array#__get
-    i32.const 128
-    i32.lt_u
-   else    
-    i32.const 0
-   end
-   if
-    local.get $0
-    i32.load
-    return
-   end
-   local.get $0
-   i32.load
-   i32.load offset=8
-   i32.const 128
-   call $rlp/encodeLength
-   local.tee $1
-   i32.load offset=8
-   local.set $2
-   local.get $1
-   i32.load offset=4
-   local.get $2
-   call $rlp/debug_mem
-   local.get $1
-   local.get $0
-   i32.load
-   call $rlp/concatUint8Array
-  end
- )
- (func $~lib/typedarray/Uint64Array#__get (; 71 ;) (type $FUNCSIG$jii) (param $0 i32) (param $1 i32) (result i64)
-  local.get $1
-  local.get $0
-  i32.load offset=8
-  i32.const 3
-  i32.shr_u
-  i32.ge_u
-  if
-   unreachable
-  end
-  local.get $0
-  i32.load offset=4
-  local.get $1
-  i32.const 3
-  i32.shl
-  i32.add
-  i64.load
- )
- (func $~lib/array/Array.create<u8> (; 72 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $~lib/array/Array.create<u8> (; 58 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   local.get $0
   i32.const 1073741808
   i32.gt_u
@@ -3278,70 +2762,7 @@
   call $~lib/memory/memory.fill
   local.get $0
  )
- (func $main/u8ArrToNibbleArr (; 73 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  (local $4 i32)
-  local.get $0
-  i32.load offset=12
-  local.tee $1
-  local.set $3
-  local.get $1
-  i32.const 1
-  i32.shl
-  call $~lib/array/Array.create<u8>
-  local.set $1
-  loop $loop|0
-   local.get $2
-   local.get $3
-   i32.lt_s
-   if
-    local.get $1
-    local.get $2
-    i32.const 1
-    i32.shl
-    local.tee $4
-    local.get $0
-    local.get $2
-    call $~lib/typedarray/Uint8Array#__get
-    i32.const 4
-    i32.shr_u
-    call $~lib/array/Array<u8>#__set
-    local.get $1
-    local.get $4
-    i32.const 1
-    i32.add
-    local.get $0
-    local.get $2
-    call $~lib/typedarray/Uint8Array#__get
-    i32.const 15
-    i32.and
-    call $~lib/array/Array<u8>#__set
-    local.get $2
-    i32.const 1
-    i32.add
-    local.set $2
-    br $loop|0
-   end
-  end
-  local.get $1
- )
- (func $~lib/map/Map<usize,main/Node>#get (; 74 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
-  local.get $0
-  local.get $1
-  local.get $1
-  call $~lib/util/hash/hash32
-  call $~lib/map/Map<usize,main/Node>#find
-  local.tee $0
-  i32.eqz
-  if
-   unreachable
-  end
-  local.get $0
-  i32.load offset=4
- )
- (func $~lib/array/Array.create<usize> (; 75 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $~lib/array/Array.create<usize> (; 59 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   local.get $0
   i32.const 268435452
   i32.gt_u
@@ -3364,269 +2785,40 @@
   call $~lib/memory/memory.fill
   local.get $0
  )
- (func $main/uintArrToNibbleArr (; 76 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
-  (local $1 i32)
+ (func $~lib/array/Array<u8>#push (; 60 ;) (type $FUNCSIG$vii) (param $0 i32) (param $1 i32)
   (local $2 i32)
   (local $3 i32)
-  (local $4 i32)
   local.get $0
-  i32.load offset=8
-  local.tee $1
-  local.set $3
-  local.get $1
+  local.get $0
+  i32.load offset=12
+  local.tee $2
   i32.const 1
+  i32.add
+  local.tee $3
+  i32.const 0
+  call $~lib/array/ensureSize
+  local.get $0
+  i32.load offset=4
+  local.get $2
+  i32.add
+  local.get $1
+  i32.store8
+  local.get $0
+  local.get $3
+  i32.store offset=12
+ )
+ (func $~lib/polyfills/bswap<u16> (; 61 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+  local.get $0
+  i32.const 8
   i32.shl
-  call $~lib/array/Array.create<u8>
-  local.set $1
-  loop $loop|0
-   local.get $2
-   local.get $3
-   i32.lt_s
-   if
-    local.get $1
-    local.get $2
-    i32.const 1
-    i32.shl
-    local.tee $4
-    local.get $0
-    local.get $2
-    call $~lib/typedarray/Uint8Array#__get
-    i32.const 4
-    i32.shr_u
-    call $~lib/array/Array<u8>#__set
-    local.get $1
-    local.get $4
-    i32.const 1
-    i32.add
-    local.get $0
-    local.get $2
-    call $~lib/typedarray/Uint8Array#__get
-    i32.const 15
-    i32.and
-    call $~lib/array/Array<u8>#__set
-    local.get $2
-    i32.const 1
-    i32.add
-    local.set $2
-    br $loop|0
-   end
-  end
-  local.get $1
+  local.get $0
+  i32.const 65535
+  i32.and
+  i32.const 8
+  i32.shr_u
+  i32.or
  )
- (func $~lib/array/Array<u8>#slice (; 77 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
-  (local $2 i32)
-  (local $3 i32)
-  i32.const 2147483647
-  local.get $0
-  i32.load offset=12
-  local.tee $2
-  i32.const 2147483647
-  local.get $2
-  i32.lt_s
-  select
-  local.get $1
-  i32.const 0
-  i32.lt_s
-  if (result i32)
-   local.get $1
-   local.get $2
-   i32.add
-   local.tee $1
-   i32.const 0
-   local.get $1
-   i32.const 0
-   i32.gt_s
-   select
-  else   
-   local.get $1
-   local.get $2
-   local.get $1
-   local.get $2
-   i32.lt_s
-   select
-  end
-  local.tee $1
-  i32.sub
-  local.tee $2
-  i32.const 0
-  local.get $2
-  i32.const 0
-  i32.gt_s
-  select
-  local.tee $2
-  i32.const 0
-  i32.const 6
-  i32.const 0
-  call $~lib/rt/__allocArray
-  local.tee $3
-  i32.load offset=4
-  local.get $0
-  i32.load offset=4
-  local.get $1
-  i32.add
-  local.get $2
-  call $~lib/memory/memory.copy
-  local.get $3
- )
- (func $~lib/array/Array<u8>#shift (; 78 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  local.get $0
-  i32.load offset=12
-  local.tee $1
-  i32.const 1
-  i32.lt_s
-  if
-   unreachable
-  end
-  local.get $0
-  i32.load offset=4
-  local.tee $2
-  i32.load8_u
-  local.get $2
-  local.get $2
-  i32.const 1
-  i32.add
-  local.get $1
-  i32.const 1
-  i32.sub
-  local.tee $1
-  call $~lib/memory/memory.copy
-  local.get $1
-  local.get $2
-  i32.add
-  i32.const 0
-  i32.store8
-  local.get $0
-  local.get $1
-  i32.store offset=12
- )
- (func $~lib/array/Array<u8>#unshift (; 79 ;) (type $FUNCSIG$vii) (param $0 i32) (param $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  local.get $0
-  local.get $0
-  i32.load offset=12
-  i32.const 1
-  i32.add
-  local.tee $2
-  i32.const 0
-  call $~lib/array/ensureSize
-  local.get $0
-  i32.load offset=4
-  local.tee $3
-  i32.const 1
-  i32.add
-  local.get $3
-  local.get $2
-  i32.const 1
-  i32.sub
-  call $~lib/memory/memory.copy
-  local.get $3
-  local.get $1
-  i32.store8
-  local.get $0
-  local.get $2
-  i32.store offset=12
- )
- (func $main/addHexPrefix (; 80 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
-  local.get $0
-  i32.load offset=12
-  i32.const 2
-  i32.rem_s
-  if
-   local.get $0
-   i32.const 1
-   call $~lib/array/Array<u8>#unshift
-  else   
-   local.get $0
-   i32.const 0
-   call $~lib/array/Array<u8>#unshift
-   local.get $0
-   i32.const 0
-   call $~lib/array/Array<u8>#unshift
-  end
-  local.get $0
-  i32.const 0
-  local.get $0
-  i32.const 0
-  call $~lib/typedarray/Uint8Array#__get
-  i32.const 2
-  i32.add
-  call $~lib/array/Array<u8>#__set
-  local.get $0
- )
- (func $main/nibbleArrToUintArr (; 81 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  (local $4 i32)
-  local.get $0
-  i32.load offset=12
-  i32.const 2
-  i32.div_s
-  call $~lib/typedarray/Uint8Array#constructor
-  local.set $2
-  loop $loop|0
-   local.get $1
-   local.get $2
-   i32.load offset=8
-   i32.lt_s
-   if
-    local.get $1
-    i32.const 1
-    i32.shl
-    local.tee $3
-    i32.const 1
-    i32.add
-    local.set $4
-    local.get $2
-    local.get $1
-    local.get $0
-    local.get $3
-    call $~lib/typedarray/Uint8Array#__get
-    i32.const 4
-    i32.shl
-    local.get $0
-    local.get $4
-    call $~lib/typedarray/Uint8Array#__get
-    i32.add
-    i32.const 255
-    i32.and
-    call $~lib/typedarray/Uint8Array#__set
-    local.get $1
-    i32.const 1
-    i32.add
-    local.set $1
-    br $loop|0
-   end
-  end
-  local.get $2
- )
- (func $~lib/array/Array<u8>#push (; 82 ;) (type $FUNCSIG$vii) (param $0 i32) (param $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  local.get $0
-  local.get $0
-  i32.load offset=12
-  local.tee $2
-  i32.const 1
-  i32.add
-  local.tee $3
-  i32.const 0
-  call $~lib/array/ensureSize
-  local.get $0
-  i32.load offset=4
-  local.get $2
-  i32.add
-  local.get $1
-  i32.store8
-  local.get $0
-  local.get $3
-  i32.store offset=12
- )
- (func $rlp/hashBranchNode (; 83 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $rlp/hashBranchNode (; 62 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   (local $1 i32)
   (local $2 i32)
   (local $3 i32)
@@ -3635,14 +2827,12 @@
   (local $6 i32)
   (local $7 i32)
   (local $8 i32)
-  i32.const 30303
-  call $rlp/debug
   i32.const 17
   call $~lib/array/Array.create<u8>
   local.set $4
   i32.const 17
   call $~lib/array/Array.create<usize>
-  local.set $7
+  local.set $6
   loop $loop|0
    local.get $1
    i32.const 17
@@ -3657,7 +2847,7 @@
      local.get $4
      local.get $1
      call $~lib/array/Array<u8>#push
-     local.get $7
+     local.get $6
      local.get $0
      local.get $1
      call $~lib/typedarray/Uint32Array#__get
@@ -3687,7 +2877,7 @@
    local.get $0
    i32.const 2
    i32.add
-   local.tee $6
+   local.tee $7
    call $~lib/arraybuffer/ArrayBuffer#constructor
    local.tee $1
    i32.const 248
@@ -3706,7 +2896,7 @@
    local.get $0
    i32.const 3
    i32.add
-   local.tee $6
+   local.tee $7
    call $~lib/arraybuffer/ArrayBuffer#constructor
    local.tee $1
    i32.const 249
@@ -3761,7 +2951,7 @@
      i32.const 1
      i32.add
      local.tee $0
-     local.get $7
+     local.get $6
      local.get $3
      call $~lib/typedarray/Uint32Array#__get
      i32.const 32
@@ -3789,69 +2979,754 @@
     end
    end
   end
-  i32.const 40403
-  call $rlp/debug
-  local.get $1
-  local.get $6
-  call $rlp/debug_mem
   i32.const 32
   call $~lib/arraybuffer/ArrayBuffer#constructor
   local.tee $0
   local.get $1
-  local.get $6
+  local.get $7
   call $keccak/ethash_keccak256
-  i32.const 40404
-  call $rlp/debug
-  local.get $0
-  i32.const 32
-  call $rlp/debug_mem
   local.get $0
  )
- (func $main/createNewBranchWhereLeafExists (; 84 ;) (type $FUNCSIG$viiiii) (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (param $4 i32)
+ (func $~lib/typedarray/Uint64Array#__get (; 63 ;) (type $FUNCSIG$jii) (param $0 i32) (param $1 i32) (result i64)
+  local.get $1
+  local.get $0
+  i32.load offset=8
+  i32.const 3
+  i32.shr_u
+  i32.ge_u
+  if
+   unreachable
+  end
+  local.get $0
+  i32.load offset=4
+  local.get $1
+  i32.const 3
+  i32.shl
+  i32.add
+  i64.load
+ )
+ (func $main/u8ArrToNibbleArr (; 64 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+  (local $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  (local $4 i32)
+  local.get $0
+  i32.load offset=12
+  local.tee $1
+  local.set $3
+  local.get $1
+  i32.const 1
+  i32.shl
+  call $~lib/array/Array.create<u8>
+  local.set $1
+  loop $loop|0
+   local.get $2
+   local.get $3
+   i32.lt_s
+   if
+    local.get $1
+    local.get $2
+    i32.const 1
+    i32.shl
+    local.tee $4
+    local.get $0
+    local.get $2
+    call $~lib/typedarray/Uint8Array#__get
+    i32.const 4
+    i32.shr_u
+    call $~lib/array/Array<u8>#__set
+    local.get $1
+    local.get $4
+    i32.const 1
+    i32.add
+    local.get $0
+    local.get $2
+    call $~lib/typedarray/Uint8Array#__get
+    i32.const 15
+    i32.and
+    call $~lib/array/Array<u8>#__set
+    local.get $2
+    i32.const 1
+    i32.add
+    local.set $2
+    br $loop|0
+   end
+  end
+  local.get $1
+ )
+ (func $~lib/map/Map<usize,main/Node>#get (; 65 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
+  local.get $0
+  local.get $1
+  local.get $1
+  call $~lib/util/hash/hash32
+  call $~lib/map/Map<usize,main/Node>#find
+  local.tee $0
+  i32.eqz
+  if
+   unreachable
+  end
+  local.get $0
+  i32.load offset=4
+ )
+ (func $main/uintArrToNibbleArr (; 66 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+  (local $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  (local $4 i32)
+  local.get $0
+  i32.load offset=8
+  local.tee $1
+  local.set $3
+  local.get $1
+  i32.const 1
+  i32.shl
+  call $~lib/array/Array.create<u8>
+  local.set $1
+  loop $loop|0
+   local.get $2
+   local.get $3
+   i32.lt_s
+   if
+    local.get $1
+    local.get $2
+    i32.const 1
+    i32.shl
+    local.tee $4
+    local.get $0
+    local.get $2
+    call $~lib/typedarray/Uint8Array#__get
+    i32.const 4
+    i32.shr_u
+    call $~lib/array/Array<u8>#__set
+    local.get $1
+    local.get $4
+    i32.const 1
+    i32.add
+    local.get $0
+    local.get $2
+    call $~lib/typedarray/Uint8Array#__get
+    i32.const 15
+    i32.and
+    call $~lib/array/Array<u8>#__set
+    local.get $2
+    i32.const 1
+    i32.add
+    local.set $2
+    br $loop|0
+   end
+  end
+  local.get $1
+ )
+ (func $~lib/array/Array<u8>#slice (; 67 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
+  (local $2 i32)
+  (local $3 i32)
+  i32.const 2147483647
+  local.get $0
+  i32.load offset=12
+  local.tee $2
+  i32.const 2147483647
+  local.get $2
+  i32.lt_s
+  select
+  local.get $1
+  i32.const 0
+  i32.lt_s
+  if (result i32)
+   local.get $1
+   local.get $2
+   i32.add
+   local.tee $1
+   i32.const 0
+   local.get $1
+   i32.const 0
+   i32.gt_s
+   select
+  else   
+   local.get $1
+   local.get $2
+   local.get $1
+   local.get $2
+   i32.lt_s
+   select
+  end
+  local.tee $1
+  i32.sub
+  local.tee $2
+  i32.const 0
+  local.get $2
+  i32.const 0
+  i32.gt_s
+  select
+  local.tee $2
+  i32.const 0
+  i32.const 6
+  i32.const 0
+  call $~lib/rt/__allocArray
+  local.tee $3
+  i32.load offset=4
+  local.get $0
+  i32.load offset=4
+  local.get $1
+  i32.add
+  local.get $2
+  call $~lib/memory/memory.copy
+  local.get $3
+ )
+ (func $~lib/array/Array<u8>#shift (; 68 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+  (local $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  local.get $0
+  i32.load offset=12
+  local.tee $1
+  i32.const 1
+  i32.lt_s
+  if
+   unreachable
+  end
+  local.get $0
+  i32.load offset=4
+  local.tee $2
+  i32.load8_u
+  local.get $2
+  local.get $2
+  i32.const 1
+  i32.add
+  local.get $1
+  i32.const 1
+  i32.sub
+  local.tee $1
+  call $~lib/memory/memory.copy
+  local.get $1
+  local.get $2
+  i32.add
+  i32.const 0
+  i32.store8
+  local.get $0
+  local.get $1
+  i32.store offset=12
+ )
+ (func $~lib/array/Array<u8>#unshift (; 69 ;) (type $FUNCSIG$vii) (param $0 i32) (param $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  local.get $0
+  local.get $0
+  i32.load offset=12
+  i32.const 1
+  i32.add
+  local.tee $2
+  i32.const 0
+  call $~lib/array/ensureSize
+  local.get $0
+  i32.load offset=4
+  local.tee $3
+  i32.const 1
+  i32.add
+  local.get $3
+  local.get $2
+  i32.const 1
+  i32.sub
+  call $~lib/memory/memory.copy
+  local.get $3
+  local.get $1
+  i32.store8
+  local.get $0
+  local.get $2
+  i32.store offset=12
+ )
+ (func $main/addHexPrefix (; 70 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+  local.get $0
+  i32.load offset=12
+  i32.const 2
+  i32.rem_s
+  if
+   local.get $0
+   i32.const 1
+   call $~lib/array/Array<u8>#unshift
+  else   
+   local.get $0
+   i32.const 0
+   call $~lib/array/Array<u8>#unshift
+   local.get $0
+   i32.const 0
+   call $~lib/array/Array<u8>#unshift
+  end
+  local.get $0
+  i32.const 0
+  local.get $0
+  i32.const 0
+  call $~lib/typedarray/Uint8Array#__get
+  i32.const 2
+  i32.add
+  call $~lib/array/Array<u8>#__set
+  local.get $0
+ )
+ (func $main/nibbleArrToUintArr (; 71 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+  (local $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  (local $4 i32)
+  local.get $0
+  i32.load offset=12
+  i32.const 2
+  i32.div_s
+  call $~lib/typedarray/Uint8Array#constructor
+  local.set $2
+  loop $loop|0
+   local.get $1
+   local.get $2
+   i32.load offset=8
+   i32.lt_s
+   if
+    local.get $1
+    i32.const 1
+    i32.shl
+    local.tee $3
+    i32.const 1
+    i32.add
+    local.set $4
+    local.get $2
+    local.get $1
+    local.get $0
+    local.get $3
+    call $~lib/typedarray/Uint8Array#__get
+    i32.const 4
+    i32.shl
+    local.get $0
+    local.get $4
+    call $~lib/typedarray/Uint8Array#__get
+    i32.add
+    i32.const 255
+    i32.and
+    call $~lib/typedarray/Uint8Array#__set
+    local.get $1
+    i32.const 1
+    i32.add
+    local.set $1
+    br $loop|0
+   end
+  end
+  local.get $2
+ )
+ (func $~lib/array/Array.create<rlp/RLPData> (; 72 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+  local.get $0
+  i32.const 268435452
+  i32.gt_u
+  if
+   unreachable
+  end
+  local.get $0
+  i32.const 2
+  i32.const 11
+  i32.const 0
+  call $~lib/rt/__allocArray
+  local.tee $0
+  i32.const 0
+  i32.store offset=12
+  local.get $0
+  i32.load offset=4
+  i32.const 0
+  local.get $0
+  i32.load offset=8
+  call $~lib/memory/memory.fill
+  local.get $0
+ )
+ (func $rlp/concatUint8Arrays~anonymous|0 (; 73 ;) (type $FUNCSIG$iiiii) (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (result i32)
+  local.get $1
+  i32.load offset=8
+  local.get $0
+  i32.add
+ )
+ (func $~lib/array/Array<~lib/typedarray/Uint8Array>#reduce<u32> (; 74 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+  (local $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  (local $4 i32)
+  local.get $0
+  i32.load offset=12
+  local.set $3
+  loop $loop|0
+   local.get $1
+   local.get $3
+   local.get $0
+   i32.load offset=12
+   local.tee $4
+   local.get $3
+   local.get $4
+   i32.lt_s
+   select
+   i32.lt_s
+   if
+    i32.const 4
+    global.set $~lib/argc
+    local.get $2
+    local.get $0
+    i32.load offset=4
+    local.get $1
+    i32.const 2
+    i32.shl
+    i32.add
+    i32.load
+    local.get $1
+    local.get $0
+    call $rlp/concatUint8Arrays~anonymous|0
+    local.set $2
+    local.get $1
+    i32.const 1
+    i32.add
+    local.set $1
+    br $loop|0
+   end
+  end
+  local.get $2
+ )
+ (func $rlp/concatUint8Arrays (; 75 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+  (local $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  local.get $0
+  call $~lib/array/Array<~lib/typedarray/Uint8Array>#reduce<u32>
+  call $~lib/typedarray/Uint8Array#constructor
+  local.set $2
+  loop $loop|0
+   local.get $1
+   local.get $0
+   i32.load offset=12
+   i32.lt_s
+   if
+    local.get $2
+    i32.load
+    local.get $2
+    call $~lib/arraybuffer/ArrayBufferView#get:byteOffset
+    i32.add
+    local.get $3
+    i32.add
+    local.get $0
+    local.get $1
+    call $~lib/array/Array<rlp/RLPData>#__get
+    i32.load
+    local.get $0
+    i32.const 1
+    call $~lib/array/Array<rlp/RLPData>#__get
+    call $~lib/arraybuffer/ArrayBufferView#get:byteOffset
+    i32.add
+    local.get $0
+    local.get $1
+    call $~lib/array/Array<rlp/RLPData>#__get
+    i32.load offset=8
+    call $~lib/memory/memory.copy
+    local.get $0
+    local.get $1
+    call $~lib/array/Array<rlp/RLPData>#__get
+    i32.load offset=8
+    local.get $3
+    i32.add
+    local.set $3
+    local.get $1
+    i32.const 1
+    i32.add
+    local.set $1
+    br $loop|0
+   end
+  end
+  local.get $2
+ )
+ (func $~lib/dataview/DataView#constructor (; 76 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+  (local $1 i32)
+  i32.const 2
+  local.get $0
+  call $~lib/arraybuffer/ArrayBuffer#get:byteLength
+  i32.gt_u
+  if
+   unreachable
+  end
+  i32.const 12
+  i32.const 17
+  call $~lib/rt/stub/__alloc
+  local.tee $1
+  i32.const 0
+  i32.store
+  local.get $1
+  i32.const 0
+  i32.store offset=4
+  local.get $1
+  i32.const 0
+  i32.store offset=8
+  local.get $1
+  i32.load
+  drop
+  local.get $1
+  local.get $0
+  i32.store
+  local.get $1
+  local.get $0
+  i32.store offset=4
+  local.get $1
+  i32.const 2
+  i32.store offset=8
+  local.get $1
+ )
+ (func $~lib/dataview/DataView#setUint16 (; 77 ;) (type $FUNCSIG$vii) (param $0 i32) (param $1 i32)
+  i32.const 2
+  local.get $0
+  i32.load offset=8
+  i32.gt_s
+  if
+   unreachable
+  end
+  local.get $0
+  i32.load offset=4
+  local.get $1
+  call $~lib/polyfills/bswap<u16>
+  i32.store16
+ )
+ (func $rlp/concatUint8Array (; 78 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
+  (local $2 i32)
+  local.get $0
+  i32.load offset=8
+  local.get $1
+  i32.load offset=8
+  i32.add
+  call $~lib/typedarray/Uint8Array#constructor
+  local.tee $2
+  i32.load
+  local.get $2
+  call $~lib/arraybuffer/ArrayBufferView#get:byteOffset
+  i32.add
+  local.get $0
+  i32.load
+  local.get $0
+  call $~lib/arraybuffer/ArrayBufferView#get:byteOffset
+  i32.add
+  local.get $0
+  i32.load offset=8
+  call $~lib/memory/memory.copy
+  local.get $2
+  i32.load
+  local.get $2
+  call $~lib/arraybuffer/ArrayBufferView#get:byteOffset
+  i32.add
+  local.get $0
+  i32.load offset=8
+  i32.add
+  local.get $1
+  i32.load
+  local.get $1
+  call $~lib/arraybuffer/ArrayBufferView#get:byteOffset
+  i32.add
+  local.get $1
+  i32.load offset=8
+  call $~lib/memory/memory.copy
+  local.get $2
+ )
+ (func $rlp/encodeLength (; 79 ;) (type $FUNCSIG$iii) (param $0 i32) (param $1 i32) (result i32)
+  (local $2 i32)
+  local.get $0
+  i32.const 56
+  i32.lt_u
+  if (result i32)
+   local.get $0
+   local.get $1
+   i32.add
+   local.tee $0
+   i32.const 256
+   i32.lt_u
+   if
+    i32.const 1
+    call $~lib/typedarray/Uint8Array#constructor
+    local.tee $1
+    i32.const 0
+    local.get $0
+    i32.const 255
+    i32.and
+    call $~lib/typedarray/Uint8Array#__set
+    local.get $1
+    return
+   end
+   local.get $0
+   i32.const 65536
+   i32.lt_u
+   if
+    i32.const 2
+    call $~lib/typedarray/Uint8Array#constructor
+    local.tee $1
+    i32.load
+    call $~lib/dataview/DataView#constructor
+    local.get $0
+    call $~lib/dataview/DataView#setUint16
+    local.get $1
+    return
+   end
+   unreachable
+  else   
+   local.get $0
+   i32.const 256
+   i32.lt_u
+   if (result i32)
+    i32.const 1
+    call $~lib/typedarray/Uint8Array#constructor
+    local.tee $2
+    i32.const 0
+    local.get $0
+    i32.const 255
+    i32.and
+    call $~lib/typedarray/Uint8Array#__set
+    i32.const 1
+   else    
+    local.get $0
+    i32.const 65536
+    i32.lt_u
+    if
+     i32.const 2
+     call $~lib/typedarray/Uint8Array#constructor
+     local.tee $2
+     i32.load
+     call $~lib/dataview/DataView#constructor
+     local.get $0
+     call $~lib/dataview/DataView#setUint16
+    else     
+     unreachable
+    end
+    i32.const 2
+   end
+   local.get $1
+   i32.const 55
+   i32.add
+   i32.add
+   local.tee $1
+   i32.const 256
+   i32.lt_u
+   if
+    i32.const 1
+    call $~lib/typedarray/Uint8Array#constructor
+    local.tee $0
+    i32.const 0
+    local.get $1
+    i32.const 255
+    i32.and
+    call $~lib/typedarray/Uint8Array#__set
+   else    
+    local.get $1
+    i32.const 65536
+    i32.lt_u
+    if
+     i32.const 2
+     call $~lib/typedarray/Uint8Array#constructor
+     local.tee $0
+     i32.load
+     call $~lib/dataview/DataView#constructor
+     local.get $1
+     call $~lib/dataview/DataView#setUint16
+    else     
+     unreachable
+    end
+   end
+   local.get $0
+   local.get $2
+   call $rlp/concatUint8Array
+  end
+ )
+ (func $rlp/encode (; 80 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+  (local $1 i32)
+  (local $2 i32)
+  local.get $0
+  i32.load offset=4
+  i32.load offset=12
+  if (result i32)
+   i32.const 16
+   i32.const 16
+   call $~lib/rt/stub/__alloc
+   i32.const 0
+   i32.const 2
+   call $~lib/arraybuffer/ArrayBufferView#constructor
+   local.tee $1
+   i32.const 0
+   i32.store offset=12
+   local.get $1
+   i32.const 0
+   i32.store offset=12
+   loop $loop|0
+    local.get $2
+    local.get $0
+    i32.load offset=4
+    i32.load offset=12
+    i32.lt_s
+    if
+     local.get $1
+     local.get $0
+     i32.load offset=4
+     local.get $2
+     call $~lib/array/Array<rlp/RLPData>#__get
+     call $rlp/encode
+     call $~lib/array/Array<~lib/string/String>#push
+     local.get $2
+     i32.const 1
+     i32.add
+     local.set $2
+     br $loop|0
+    end
+   end
+   local.get $1
+   call $rlp/concatUint8Arrays
+   local.tee $0
+   i32.load offset=8
+   i32.const 192
+   call $rlp/encodeLength
+   local.get $0
+   call $rlp/concatUint8Array
+  else   
+   local.get $0
+   i32.load
+   i32.load offset=8
+   i32.const 1
+   i32.eq
+   if (result i32)
+    local.get $0
+    i32.load
+    i32.const 0
+    call $~lib/typedarray/Uint8Array#__get
+    i32.const 128
+    i32.lt_u
+   else    
+    i32.const 0
+   end
+   if
+    local.get $0
+    i32.load
+    return
+   end
+   local.get $0
+   i32.load
+   i32.load offset=8
+   i32.const 128
+   call $rlp/encodeLength
+   local.get $0
+   i32.load
+   call $rlp/concatUint8Array
+  end
+ )
+ (func $main/createNewBranchWhereLeafExists (; 81 ;) (type $FUNCSIG$viiiii) (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (param $4 i32)
   (local $5 i32)
   (local $6 i32)
   (local $7 i32)
   (local $8 i32)
   (local $9 i32)
-  i32.const 777
-  call $main/debug
-  local.get $0
-  i32.load
-  local.get $0
-  call $~lib/arraybuffer/ArrayBufferView#get:byteOffset
-  i32.add
-  local.get $0
-  i32.load offset=8
-  call $main/debug_mem
   local.get $3
   i32.load offset=8
   call $rlp/decode
-  local.set $3
-  i32.const 7771
-  call $main/debug
-  local.get $3
+  local.tee $3
   i32.load offset=4
   i32.const 1
   call $~lib/array/Array<rlp/RLPData>#__get
   i32.load
-  local.tee $5
-  i32.load
-  local.get $5
-  call $~lib/arraybuffer/ArrayBufferView#get:byteOffset
-  i32.add
-  local.get $5
-  i32.load offset=8
-  call $main/debug_mem
+  local.set $7
   local.get $3
   i32.load offset=4
   i32.const 0
   call $~lib/array/Array<rlp/RLPData>#__get
   i32.load
   call $main/uintArrToNibbleArr
-  local.set $3
-  i32.const 7772
-  call $main/debug
-  local.get $3
+  local.tee $3
   i32.const 0
   call $~lib/typedarray/Uint8Array#__get
   i32.const 1
@@ -3866,8 +3741,6 @@
    call $~lib/array/Array<u8>#slice
   end
   local.set $3
-  i32.const 7773
-  call $main/debug
   local.get $1
   local.get $2
   call $~lib/typedarray/Uint8Array#__get
@@ -3881,20 +3754,13 @@
   local.get $3
   call $~lib/array/Array<u8>#shift
   local.set $8
-  i32.const 7774
-  call $main/debug
   local.get $3
   call $main/addHexPrefix
   call $main/nibbleArrToUintArr
-  local.set $6
-  i32.const 7775
-  call $main/debug
+  local.set $5
   i32.const 2
   call $~lib/array/Array.create<rlp/RLPData>
-  local.set $3
-  i32.const 7776
-  call $main/debug
-  local.get $3
+  local.tee $3
   i32.const 0
   i32.const 0
   call $~lib/array/Array.create<rlp/RLPData>
@@ -3906,15 +3772,82 @@
   call $~lib/array/Array.create<rlp/RLPData>
   call $rlp/RLPData#constructor
   call $~lib/array/Array<~lib/string/String>#push
-  i32.const 7777
-  call $main/debug
   local.get $3
   i32.const 0
   call $~lib/array/Array<rlp/RLPData>#__get
-  local.tee $7
+  local.tee $6
   i32.load
   drop
+  local.get $6
+  local.get $5
+  i32.store
+  local.get $3
+  i32.const 1
+  call $~lib/array/Array<rlp/RLPData>#__get
+  local.tee $5
+  i32.load
+  drop
+  local.get $5
   local.get $7
+  i32.store
+  i32.const 0
+  local.get $3
+  call $rlp/RLPData#constructor
+  call $rlp/encode
+  local.set $3
+  i32.const 32
+  call $~lib/arraybuffer/ArrayBuffer#constructor
+  local.tee $7
+  local.get $3
+  i32.load
+  local.get $3
+  call $~lib/arraybuffer/ArrayBufferView#get:byteOffset
+  i32.add
+  local.get $3
+  i32.load offset=8
+  call $keccak/ethash_keccak256
+  i32.const 0
+  i32.const 0
+  local.get $3
+  call $main/Node#constructor
+  local.set $3
+  global.get $main/Trie
+  local.get $7
+  local.get $3
+  call $~lib/map/Map<usize,main/Node>#set
+  local.get $1
+  local.get $2
+  call $~lib/typedarray/Uint8Array#__get
+  local.set $5
+  local.get $1
+  local.get $2
+  i32.const 1
+  i32.add
+  call $~lib/array/Array<u8>#slice
+  call $main/addHexPrefix
+  call $main/nibbleArrToUintArr
+  local.set $6
+  i32.const 2
+  call $~lib/array/Array.create<rlp/RLPData>
+  local.tee $3
+  i32.const 0
+  i32.const 0
+  call $~lib/array/Array.create<rlp/RLPData>
+  call $rlp/RLPData#constructor
+  call $~lib/array/Array<~lib/string/String>#push
+  local.get $3
+  i32.const 0
+  i32.const 0
+  call $~lib/array/Array.create<rlp/RLPData>
+  call $rlp/RLPData#constructor
+  call $~lib/array/Array<~lib/string/String>#push
+  local.get $3
+  i32.const 0
+  call $~lib/array/Array<rlp/RLPData>#__get
+  local.tee $9
+  i32.load
+  drop
+  local.get $9
   local.get $6
   i32.store
   local.get $3
@@ -3924,97 +3857,6 @@
   i32.load
   drop
   local.get $6
-  local.get $5
-  i32.store
-  i32.const 7777
-  call $main/debug
-  i32.const 0
-  local.get $3
-  call $rlp/RLPData#constructor
-  i32.const 7778
-  call $main/debug
-  call $rlp/encode
-  local.set $3
-  i32.const 7779
-  call $main/debug
-  i32.const 32
-  call $~lib/arraybuffer/ArrayBuffer#constructor
-  local.tee $5
-  local.get $3
-  i32.load
-  local.get $3
-  call $~lib/arraybuffer/ArrayBufferView#get:byteOffset
-  i32.add
-  local.get $3
-  i32.load offset=8
-  call $keccak/ethash_keccak256
-  i32.const 7780
-  call $main/debug
-  local.get $5
-  i32.const 32
-  call $main/debug_mem
-  i32.const 0
-  i32.const 0
-  local.get $3
-  call $main/Node#constructor
-  local.set $3
-  i32.const 77801
-  call $main/debug
-  global.get $main/Trie
-  local.get $5
-  local.get $3
-  call $~lib/map/Map<usize,main/Node>#set
-  i32.const 77802
-  call $main/debug
-  local.get $1
-  local.get $2
-  call $~lib/typedarray/Uint8Array#__get
-  local.set $6
-  local.get $1
-  local.get $2
-  i32.const 1
-  i32.add
-  call $~lib/array/Array<u8>#slice
-  call $main/addHexPrefix
-  call $main/nibbleArrToUintArr
-  local.set $7
-  i32.const 7781
-  call $main/debug
-  i32.const 2
-  call $~lib/array/Array.create<rlp/RLPData>
-  local.set $3
-  i32.const 7782
-  call $main/debug
-  local.get $3
-  i32.const 0
-  i32.const 0
-  call $~lib/array/Array.create<rlp/RLPData>
-  call $rlp/RLPData#constructor
-  call $~lib/array/Array<~lib/string/String>#push
-  local.get $3
-  i32.const 0
-  i32.const 0
-  call $~lib/array/Array.create<rlp/RLPData>
-  call $rlp/RLPData#constructor
-  call $~lib/array/Array<~lib/string/String>#push
-  i32.const 7783
-  call $main/debug
-  local.get $3
-  i32.const 0
-  call $~lib/array/Array<rlp/RLPData>#__get
-  local.tee $9
-  i32.load
-  drop
-  local.get $9
-  local.get $7
-  i32.store
-  local.get $3
-  i32.const 1
-  call $~lib/array/Array<rlp/RLPData>#__get
-  local.tee $7
-  i32.load
-  drop
-  local.get $7
   local.get $0
   i32.store
   i32.const 0
@@ -4022,8 +3864,6 @@
   call $rlp/RLPData#constructor
   call $rlp/encode
   local.set $0
-  i32.const 7784
-  call $main/debug
   i32.const 32
   call $~lib/arraybuffer/ArrayBuffer#constructor
   local.tee $3
@@ -4035,58 +3875,41 @@
   local.get $0
   i32.load offset=8
   call $keccak/ethash_keccak256
-  i32.const 7785
-  call $main/debug
-  local.get $3
-  i32.const 32
-  call $main/debug_mem
   i32.const 0
   i32.const 0
   local.get $0
   call $main/Node#constructor
   local.set $0
-  i32.const 77851
-  call $main/debug
   global.get $main/Trie
   local.get $3
   local.get $0
   call $~lib/map/Map<usize,main/Node>#set
-  i32.const 77852
-  call $main/debug
   i32.const 17
   call $~lib/array/Array<usize>#constructor
   call $rlp/RLPBranchNode#constructor
   local.tee $0
   i32.load
   local.get $8
-  local.get $5
+  local.get $7
   call $~lib/array/Array<usize>#__set
   local.get $0
   i32.load
-  local.get $6
+  local.get $5
   local.get $3
   call $~lib/array/Array<usize>#__set
-  i32.const 77841
-  call $main/debug
   local.get $0
   i32.load
   call $rlp/hashBranchNode
   local.set $3
-  i32.const 77842
-  call $main/debug
   i32.const 1
   local.get $0
   i32.const 0
   call $main/Node#constructor
   local.set $0
-  i32.const 77843
-  call $main/debug
   global.get $main/Trie
   local.get $3
   local.get $0
   call $~lib/map/Map<usize,main/Node>#set
-  i32.const 77844
-  call $main/debug
   local.get $4
   local.get $4
   i32.load offset=12
@@ -4094,37 +3917,27 @@
   i32.sub
   call $~lib/typedarray/Uint32Array#__get
   local.set $0
-  i32.const 77853
-  call $main/debug
   global.get $main/Trie
   local.get $0
   call $~lib/map/Map<usize,main/Node>#get
-  i32.const 77854
-  call $main/debug
   local.get $1
   local.get $2
   i32.const 1
   i32.sub
   call $~lib/typedarray/Uint8Array#__get
   local.set $1
-  i32.const 77855
-  call $main/debug
   i32.load offset=4
   i32.load
   local.get $1
   local.get $3
   call $~lib/array/Array<usize>#__set
-  i32.const 77856
-  call $main/debug
  )
- (func $main/insertNewLeafNewBranch (; 85 ;) (type $FUNCSIG$viii) (param $0 i32) (param $1 i32) (param $2 i32)
+ (func $main/insertNewLeafNewBranch (; 82 ;) (type $FUNCSIG$viii) (param $0 i32) (param $1 i32) (param $2 i32)
   (local $3 i32)
   (local $4 i32)
   (local $5 i32)
   (local $6 i32)
   (local $7 i32)
-  i32.const 889
-  call $main/debug
   global.get $main/Trie
   local.get $0
   call $~lib/map/Map<usize,main/Node>#get
@@ -4134,21 +3947,16 @@
   local.tee $5
   local.get $0
   call $~lib/array/Array<~lib/string/String>#push
-  i32.const 8892
-  call $main/debug
   block $folding-inner0
    loop $loop|0
     local.get $4
     i32.const 40
     i32.lt_s
     if
-     i32.const 88933
-     call $main/debug
      local.get $1
      local.get $4
      call $~lib/typedarray/Uint8Array#__get
-     local.tee $6
-     call $main/debug
+     local.set $6
      local.get $3
      i32.load
      if
@@ -4157,15 +3965,11 @@
       i32.const 1
       i32.ne
       br_if $folding-inner0
-      i32.const 8895
-      call $main/debug
       local.get $3
       i32.load offset=4
       i32.load offset=4
       i32.eqz
       if
-       i32.const 8896
-       call $main/debug
        local.get $3
        i32.load offset=4
        local.set $0
@@ -4179,39 +3983,25 @@
        local.get $7
        i32.store offset=4
       end
-      i32.const 88951
-      call $main/debug
       local.get $3
       i32.load offset=4
       i32.load
       local.get $6
       call $~lib/typedarray/Uint32Array#__get
       local.tee $0
-      i32.const 32
-      call $main/debug_mem
-      i32.const 88952
-      call $main/debug
-      local.get $0
       i32.eqz
       br_if $folding-inner0
       local.get $5
       local.get $0
       call $~lib/array/Array<~lib/string/String>#push
-      i32.const 88953
-      call $main/debug
       global.get $main/Trie
       local.get $0
       call $~lib/map/Map<usize,main/Node>#get
-      local.set $0
-      i32.const 88954
-      call $main/debug
-      local.get $0
+      local.tee $0
       i32.load
       i32.const 1
       i32.eq
       if
-       i32.const 88955
-       call $main/debug
        local.get $3
        i32.load offset=4
        i32.load offset=4
@@ -4222,9 +4012,6 @@
        i32.load
        if
         unreachable
-       else        
-        i32.const 88956
-        call $main/debug
        end
       end
       local.get $0
@@ -4235,8 +4022,6 @@
       local.set $4
       br $loop|0
      else      
-      i32.const 8894
-      call $main/debug
       local.get $2
       local.get $1
       local.get $4
@@ -4252,16 +4037,11 @@
   end
   unreachable
  )
- (func $main/rehashNode (; 86 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
+ (func $main/rehashNode (; 83 ;) (type $FUNCSIG$ii) (param $0 i32) (result i32)
   (local $1 i32)
   (local $2 i32)
   (local $3 i32)
   (local $4 i32)
-  i32.const 909081
-  call $main/debug
-  local.get $0
-  i32.const 32
-  call $main/debug_mem
   global.get $main/Trie
   local.get $0
   call $~lib/map/Map<usize,main/Node>#get
@@ -4269,12 +4049,8 @@
   i32.load
   i32.eqz
   if
-   i32.const 909082
-   call $main/debug
    unreachable
   end
-  i32.const 909083
-  call $main/debug
   local.get $0
   i32.load
   i32.const 1
@@ -4286,49 +4062,18 @@
    local.tee $2
    i32.eqz
    if
-    i32.const 909084
-    call $main/debug
     unreachable
    end
-   i32.const 909011
-   call $main/debug
-   local.get $2
-   i32.load offset=12
-   call $main/debug
    loop $loop|0
     local.get $1
     local.get $2
     i32.load offset=12
     i32.lt_s
     if
-     i32.const 909012
-     call $main/debug
      local.get $2
      local.get $1
      call $~lib/typedarray/Uint8Array#__get
-     call $main/debug
-     local.get $1
-     i32.const 1
-     i32.add
-     local.set $1
-     br $loop|0
-    end
-   end
-   i32.const 0
-   local.set $1
-   loop $loop|1
-    local.get $1
-    local.get $2
-    i32.load offset=12
-    i32.lt_s
-    if
-     i32.const 909085
-     call $main/debug
-     local.get $2
-     local.get $1
-     call $~lib/typedarray/Uint8Array#__get
-     local.tee $3
-     call $main/debug
+     local.set $3
      local.get $0
      i32.load offset=4
      i32.load
@@ -4346,32 +4091,24 @@
      i32.const 1
      i32.add
      local.set $1
-     br $loop|1
+     br $loop|0
     end
    end
-   i32.const 909086
-   call $main/debug
    local.get $0
    i32.load offset=4
    i32.load
    call $rlp/hashBranchNode
    local.set $1
-   i32.const 909087
-   call $main/debug
    global.get $main/Trie
    local.get $1
    local.get $0
    call $~lib/map/Map<usize,main/Node>#set
-   i32.const 909088
-   call $main/debug
    local.get $1
    return
   end
-  i32.const 909089
-  call $main/debug
   unreachable
  )
- (func $main/main (; 87 ;) (type $FUNCSIG$i) (result i32)
+ (func $main/main (; 84 ;) (type $FUNCSIG$i) (result i32)
   (local $0 i32)
   (local $1 i32)
   (local $2 i32)
@@ -4387,8 +4124,6 @@
   (local $12 i32)
   (local $13 i32)
   (local $14 i32)
-  (local $15 i32)
-  (local $16 i32)
   i32.const 650
   call $~lib/arraybuffer/ArrayBuffer#constructor
   drop
@@ -4396,7 +4131,7 @@
   call $~lib/arraybuffer/ArrayBuffer#constructor
   local.tee $0
   call $~lib/typedarray/Uint64Array.wrap
-  local.set $8
+  local.set $7
   local.get $0
   call $main/eth2_loadPreStateRoot
   call $main/eth2_blockDataSize
@@ -4425,31 +4160,31 @@
   i32.const 2
   call $~lib/array/Array<rlp/RLPData>#__get
   i32.load
-  local.set $5
+  local.set $6
   local.get $2
   i32.load
   local.get $2
   call $~lib/arraybuffer/ArrayBufferView#get:byteOffset
   i32.add
-  local.set $16
+  local.set $13
   i32.load
   call $rlp/decode
   i32.load offset=4
-  local.set $16
+  local.set $14
   i32.const 12
   i32.const 15
   call $~lib/rt/stub/__alloc
   i32.const 100
   i32.const 2
   call $~lib/arraybuffer/ArrayBufferView#constructor
-  local.set $6
+  local.set $5
   loop $continue|0
    local.get $1
-   local.get $5
+   local.get $6
    i32.load offset=8
    i32.lt_s
    if
-    local.get $5
+    local.get $6
     local.get $1
     call $~lib/typedarray/Uint8Array#__get
     local.set $0
@@ -4474,26 +4209,15 @@
         br_if $case2|1
         br $break|1
        end
-       i32.const 80
-       call $main/debug
-       local.get $16
-       local.get $10
+       local.get $14
+       local.get $9
        call $~lib/array/Array<rlp/RLPData>#__get
-       local.get $10
+       i32.load
+       local.set $0
+       local.get $9
        i32.const 1
        i32.add
-       local.set $10
-       i32.load
-       local.tee $0
-       i32.load
-       local.get $0
-       call $~lib/arraybuffer/ArrayBufferView#get:byteOffset
-       i32.add
-       local.get $0
-       i32.load offset=8
-       call $main/debug_mem
-       i32.const 81
-       call $main/debug
+       local.set $9
        i32.const 32
        call $~lib/arraybuffer/ArrayBuffer#constructor
        local.tee $2
@@ -4505,29 +4229,16 @@
        local.get $0
        i32.load offset=8
        call $keccak/ethash_keccak256
-       local.get $2
-       i32.const 32
-       call $main/debug_mem
-       local.get $2
-       i32.const 32
-       call $~lib/typedarray/Uint8Array.wrap
-       drop
-       i32.const 881
-       call $main/debug
        i32.const 0
        i32.const 0
        local.get $0
        call $main/Node#constructor
        local.set $0
-       i32.const 882
-       call $main/debug
        global.get $main/Trie
        local.get $2
        local.get $0
        call $~lib/map/Map<usize,main/Node>#set
-       i32.const 883
-       call $main/debug
-       local.get $6
+       local.get $5
        local.get $3
        local.get $2
        call $~lib/typedarray/Uint32Array#__set
@@ -4541,9 +4252,7 @@
        local.set $1
        br $break|1
       end
-      i32.const 81
-      call $main/debug
-      local.get $5
+      local.get $6
       local.get $1
       call $~lib/typedarray/Uint8Array#__get
       local.set $2
@@ -4563,7 +4272,7 @@
        if
         local.get $4
         local.get $0
-        local.get $5
+        local.get $6
         local.get $1
         call $~lib/typedarray/Uint8Array#__get
         call $~lib/array/Array<u8>#__set
@@ -4580,10 +4289,10 @@
       end
       local.get $2
       call $~lib/array/Array<u8>#constructor
-      local.set $11
+      local.set $10
       local.get $2
       call $~lib/array/Array<usize>#constructor
-      local.set $9
+      local.set $11
       i32.const 0
       local.set $0
       loop $loop|3
@@ -4591,7 +4300,7 @@
        local.get $2
        i32.lt_s
        if
-        local.get $11
+        local.get $10
         local.get $0
         local.get $4
         local.get $2
@@ -4599,12 +4308,12 @@
         i32.sub
         local.get $0
         i32.sub
-        local.tee $7
+        local.tee $8
         call $~lib/typedarray/Uint8Array#__get
         call $~lib/array/Array<u8>#__set
-        local.get $9
-        local.get $7
-        local.get $6
+        local.get $11
+        local.get $8
+        local.get $5
         local.get $3
         i32.const 1
         i32.sub
@@ -4618,102 +4327,25 @@
         br $loop|3
        end
       end
-      i32.const 811
-      call $main/debug
-      i32.const 17
-      call $~lib/array/Array.create<rlp/RLPData>
-      local.set $0
-      i32.const 812
-      call $main/debug
-      i32.const 0
-      local.get $0
-      call $rlp/RLPData#constructor
-      local.set $7
       i32.const 17
       call $~lib/array/Array<usize>#constructor
       call $rlp/RLPBranchNode#constructor
-      local.set $12
-      i32.const 813
-      call $main/debug
+      local.set $4
       i32.const 0
       local.set $0
       loop $loop|4
        local.get $0
-       i32.const 17
-       i32.lt_s
-       if
-        local.get $0
-        call $main/debug
-        local.get $7
-        i32.load offset=4
-        i32.const 0
-        i32.const 0
-        call $~lib/array/Array.create<rlp/RLPData>
-        call $rlp/RLPData#constructor
-        call $~lib/array/Array<~lib/string/String>#push
-        local.get $0
-        i32.const 1
-        i32.add
-        local.set $0
-        br $loop|4
-       end
-      end
-      i32.const 814
-      call $main/debug
-      i32.const 0
-      local.set $0
-      loop $loop|5
-       local.get $0
        local.get $2
        i32.lt_s
        if
-        local.get $0
-        call $main/debug
-        local.get $11
+        local.get $10
         local.get $0
         call $~lib/typedarray/Uint8Array#__get
-        local.set $13
-        i32.const 32
-        call $~lib/typedarray/Uint8Array#constructor
-        local.set $4
-        i32.const 81411
-        call $main/debug
-        local.get $9
-        local.get $0
-        call $~lib/typedarray/Uint32Array#__get
-        i32.const 32
-        call $main/debug_mem
+        local.set $8
         local.get $4
         i32.load
-        local.get $4
-        call $~lib/arraybuffer/ArrayBufferView#get:byteOffset
-        i32.add
-        local.get $9
-        local.get $0
-        call $~lib/typedarray/Uint32Array#__get
-        i32.const 32
-        call $~lib/memory/memory.copy
-        i32.const 81412
-        call $main/debug
-        local.get $4
-        i32.load
-        local.get $4
-        call $~lib/arraybuffer/ArrayBufferView#get:byteOffset
-        i32.add
-        local.get $4
-        i32.load offset=8
-        call $main/debug_mem
-        local.get $7
-        i32.load offset=4
-        local.get $13
-        local.get $4
-        i32.const 0
-        call $rlp/RLPData#constructor
-        call $~lib/array/Array<rlp/RLPData>#__set
-        local.get $12
-        i32.load
-        local.get $13
-        local.get $9
+        local.get $8
+        local.get $11
         local.get $0
         call $~lib/typedarray/Uint32Array#__get
         call $~lib/array/Array<usize>#__set
@@ -4721,58 +4353,25 @@
         i32.const 1
         i32.add
         local.set $0
-        br $loop|5
+        br $loop|4
        end
       end
-      i32.const 815
-      call $main/debug
-      local.get $7
-      call $rlp/encode
-      local.set $0
-      i32.const 816
-      call $main/debug
-      local.get $0
-      i32.load
-      local.get $0
-      call $~lib/arraybuffer/ArrayBufferView#get:byteOffset
-      i32.add
-      local.get $0
-      i32.load offset=8
-      call $main/debug_mem
-      i32.const 32
-      call $~lib/arraybuffer/ArrayBuffer#constructor
-      local.tee $2
-      local.get $0
-      i32.load
-      local.get $0
-      call $~lib/arraybuffer/ArrayBufferView#get:byteOffset
-      i32.add
-      local.get $0
-      i32.load offset=8
-      call $keccak/ethash_keccak256
-      i32.const 333
-      call $main/debug
-      local.get $2
-      i32.const 32
-      call $main/debug_mem
-      i32.const 444
-      call $main/debug
       i32.const 1
-      local.get $12
+      local.get $4
       i32.const 0
       call $main/Node#constructor
+      local.set $2
+      local.get $4
+      i32.load
+      call $rlp/hashBranchNode
       local.set $0
-      i32.const 445
-      call $main/debug
       global.get $main/Trie
-      local.get $2
       local.get $0
-      call $~lib/map/Map<usize,main/Node>#set
-      i32.const 446
-      call $main/debug
-      local.get $6
-      local.get $3
       local.get $2
+      call $~lib/map/Map<usize,main/Node>#set
+      local.get $5
+      local.get $3
+      local.get $0
       call $~lib/typedarray/Uint32Array#__set
       local.get $3
       i32.const 1
@@ -4780,9 +4379,7 @@
       local.set $3
       br $break|1
      end
-     i32.const 82
-     call $main/debug
-     local.get $5
+     local.get $6
      local.get $1
      call $~lib/typedarray/Uint8Array#__get
      local.set $2
@@ -4792,22 +4389,22 @@
      local.set $1
      i32.const 0
      local.set $0
-     loop $loop|6
+     loop $loop|5
       local.get $0
       local.get $2
       i32.lt_s
       if
-       local.get $15
+       local.get $12
        i32.const 5
        i32.shl
-       local.get $16
+       local.get $13
        i32.add
        local.set $4
-       local.get $14
+       local.get $12
        i32.const 1
        i32.add
-       local.set $14
-       local.get $6
+       local.set $12
+       local.get $5
        local.get $3
        local.get $4
        call $~lib/typedarray/Uint32Array#__set
@@ -4819,14 +4416,14 @@
        i32.const 1
        i32.add
        local.set $0
-       br $loop|6
+       br $loop|5
       end
      end
     end
     br $continue|0
    end
   end
-  local.get $6
+  local.get $5
   local.get $3
   i32.const 1
   i32.sub
@@ -4843,7 +4440,7 @@
   local.tee $1
   i32.const 0
   call $~lib/typedarray/Uint64Array#__get
-  local.get $8
+  local.get $7
   i32.const 0
   call $~lib/typedarray/Uint64Array#__get
   i64.ne
@@ -4853,7 +4450,7 @@
    local.get $1
    i32.const 1
    call $~lib/typedarray/Uint64Array#__get
-   local.get $8
+   local.get $7
    i32.const 1
    call $~lib/typedarray/Uint64Array#__get
    i64.ne
@@ -4864,7 +4461,7 @@
    local.get $1
    i32.const 2
    call $~lib/typedarray/Uint64Array#__get
-   local.get $8
+   local.get $7
    i32.const 2
    call $~lib/typedarray/Uint64Array#__get
    i64.ne
@@ -4875,7 +4472,7 @@
    local.get $1
    i32.const 3
    call $~lib/typedarray/Uint64Array#__get
-   local.get $8
+   local.get $7
    i32.const 3
    call $~lib/typedarray/Uint64Array#__get
    i64.ne
@@ -4892,17 +4489,12 @@
   i32.const 10184
   call $~lib/rt/__allocArray
   call $main/u8ArrToNibbleArr
-  local.tee $1
-  i32.load
-  local.get $1
-  call $~lib/arraybuffer/ArrayBufferView#get:byteOffset
-  i32.add
-  local.get $1
-  i32.load offset=8
-  call $main/debug_mem
-  i32.const 20
+  local.set $1
+  i32.const 73
   call $~lib/array/Array.create<u8>
   drop
+  local.get $0
+  local.get $1
   i32.const 73
   i32.const 0
   i32.const 6
@@ -4911,33 +4503,13 @@
   i32.load
   i32.const 73
   call $~lib/typedarray/Uint8Array.wrap
-  local.tee $3
-  i32.load
-  local.get $3
-  call $~lib/arraybuffer/ArrayBufferView#get:byteOffset
-  i32.add
-  local.get $3
-  i32.load offset=8
-  call $main/debug_mem
-  local.get $0
-  local.get $1
-  local.get $3
   call $main/insertNewLeafNewBranch
-  i32.const 90908
-  call $main/debug
   local.get $0
   call $main/rehashNode
-  local.set $0
-  i32.const 90909
-  call $main/debug
-  local.get $0
-  i32.const 32
-  call $main/debug_mem
-  local.get $0
   call $main/eth2_savePostStateRoot
   i32.const 1
  )
- (func $start (; 88 ;) (type $FUNCSIG$v)
+ (func $start (; 85 ;) (type $FUNCSIG$v)
   i32.const 10320
   global.set $~lib/rt/stub/startOffset
   global.get $~lib/rt/stub/startOffset
@@ -4945,7 +4517,7 @@
   call $~lib/map/Map<usize,main/Node>#constructor
   global.set $main/Trie
  )
- (func $null (; 89 ;) (type $FUNCSIG$v)
+ (func $null (; 86 ;) (type $FUNCSIG$v)
   nop
  )
 )
