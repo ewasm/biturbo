@@ -37,11 +37,9 @@ class Node {
     //public type: u8,
     public type: NodeType,
 
-    // a leaf node is just the rlp encoded leaf
-    // public body: RLPBranchNode | Uint8Array,
-
     public branchBody: RLPBranchNode | null,
     public leafBody: Uint8Array | null,
+    // a leaf body is just the rlp encoded account
 
   ) {}
 }
@@ -79,6 +77,78 @@ export function main(): i32 {
   // input data is RLP
   let input_decoded = decode(input_data);
   // input_decoded is type RLPData: { buffer: Uint8Array, children: RLPData[] }
+
+
+  let verified_prestate_root_ptr = verifyMultiproof(input_decoded);
+
+  let verifiedPrestateRootBuf = new ArrayBuffer(32);
+  // doing memory.copy here because we don't have the reference to the original backing buffer of verified_prestate_root_ptr, only the pointer
+  // TODO: try dereferencing the pointer instead of recreating an arraybuffer
+  memory.copy((verifiedPrestateRootBuf as usize), verified_prestate_root_ptr, 32);
+  let verified_prestate_root = Uint64Array.wrap(verifiedPrestateRootBuf, 0, 4);
+
+  // TODO: make helper for hash comparison, and use @inline
+  if (  (verified_prestate_root[0] != prestate_root_hash_data[0])
+      || (verified_prestate_root[1] != prestate_root_hash_data[1])
+      || (verified_prestate_root[2] != prestate_root_hash_data[2])
+      || (verified_prestate_root[3] != prestate_root_hash_data[3]) ) {
+    throw new Error('hashes dont match!');
+  }
+
+
+
+  /*
+  // **** loop just verifying the prestate
+  // verifyMultiproof does 4 calls to keccak256
+  // 50 iterations does 200 calls to keccak256
+  for (let i = 0; i < 49; i++) {
+    verified_prestate_root_ptr = verifyMultiproof(input_decoded);
+  }
+  eth2_savePostStateRoot(verified_prestate_root_ptr);
+  */
+
+
+  // **** update post-state
+  // INPUT 2: address is another input, also hardcoded for testing.
+  let address_hash = Array.create<u8>(32);
+  // keccak("eb79aa62d6433e0a23efeb3c859eae7b3c74e850")
+  address_hash = [14, 141, 0, 120, 132, 143, 54, 115, 94, 135, 183, 110, 98, 144, 35, 193, 245, 40, 118, 164, 66, 9, 192, 120, 221, 66, 131, 45, 8, 208, 15, 177];
+
+  let key_nibbles = u8ArrToNibbleArr(address_hash);
+  //debug_mem((key_nibbles.buffer as usize) + key_nibbles.byteOffset, key_nibbles.byteLength);
+
+  let new_leaf_account_rlp_array = Array.create<u8>(73);
+  //let new_leaf_account_rlp = new Uint8Array(73);
+  // f8478083ffffffa056e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421a0c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470
+  new_leaf_account_rlp_array = [248, 71, 128, 131, 255, 255, 255, 160, 86, 232, 31, 23, 27, 204, 85, 166, 255, 131, 69, 230, 146, 192, 248, 110, 91, 72, 224, 27, 153, 108, 173, 192, 1, 98, 47, 181, 227, 99, 180, 33, 160, 197, 210, 70, 1, 134, 247, 35, 60, 146, 126, 125, 178, 220, 199, 3, 192, 229, 0, 182, 83, 202, 130, 39, 59, 123, 250, 216, 4, 93, 133, 164, 112];
+
+  let new_leaf_account_rlp = Uint8Array.wrap(new_leaf_account_rlp_array.buffer, 0, 73);
+  //debug_mem((new_leaf_account_rlp.buffer as usize) + new_leaf_account_rlp.byteOffset, new_leaf_account_rlp.byteLength);
+
+  insertNewLeafNewBranch(verified_prestate_root_ptr, key_nibbles, new_leaf_account_rlp);
+
+  let new_root_ptr = rehashNode(verified_prestate_root_ptr);
+  //debug_mem(new_root_ptr, 32);
+
+  // **** verify pre-state + update post-state
+  // 9 calls to keccak256 in the first verify + update
+  // 22 iterations total to 198 calls to keccak256
+  for (let i = 0; i < 21; i++) {
+    let calculated_prestate_root_ptr = verifyMultiproof(input_decoded);
+    insertNewLeafNewBranch(calculated_prestate_root_ptr, key_nibbles, new_leaf_account_rlp);
+    let calculated_poststate_ptr = rehashNode(verified_prestate_root_ptr);
+    new_root_ptr = calculated_poststate_ptr;
+  }
+  eth2_savePostStateRoot(new_root_ptr);
+
+
+
+  return 1;
+}
+
+
+
+function verifyMultiproof(input_decoded: RLPData): usize {
 
   let accounts_sequence_encoded = input_decoded.children[0]; // accounts array to be further decoded
   let hashes_data = input_decoded.children[1].buffer; // 32-byte hashes, simply concatenated
@@ -231,55 +301,8 @@ export function main(): i32 {
   }
 
 
-
   let verified_prestate_root_ptr = multiproofStack[stackTop - 1];
-
-  let verifiedPrestateRootBuf = new ArrayBuffer(32);
-  // doing memory.copy here because we don't have the reference to the original backing buffer of verified_prestate_root_ptr, only the pointer
-  // TODO: try dereferencing the pointer instead of recreating an arraybuffer
-  memory.copy((verifiedPrestateRootBuf as usize), verified_prestate_root_ptr, 32);
-  let verified_prestate_root = Uint64Array.wrap(verifiedPrestateRootBuf, 0, 4);
-
-
-  // TODO: make helper for hash comparison, and use @inline
-  if (  (verified_prestate_root[0] != prestate_root_hash_data[0])
-      || (verified_prestate_root[1] != prestate_root_hash_data[1])
-      || (verified_prestate_root[2] != prestate_root_hash_data[2])
-      || (verified_prestate_root[3] != prestate_root_hash_data[3]) ) {
-    throw new Error('hashes dont match!');
-  }
-
-
-
-  // INPUT 2: address is another input, also hardcoded for testing.
-  let address_hash = Array.create<u8>(32);
-  // keccak("eb79aa62d6433e0a23efeb3c859eae7b3c74e850")
-  address_hash = [14, 141, 0, 120, 132, 143, 54, 115, 94, 135, 183, 110, 98, 144, 35, 193, 245, 40, 118, 164, 66, 9, 192, 120, 221, 66, 131, 45, 8, 208, 15, 177];
-
-  let key_nibbles = u8ArrToNibbleArr(address_hash);
-  //debug_mem((key_nibbles.buffer as usize) + key_nibbles.byteOffset, key_nibbles.byteLength);
-
-  let new_leaf_account_rlp_array = Array.create<u8>(73);
-  //let new_leaf_account_rlp = new Uint8Array(73);
-  // f8478083ffffffa056e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421a0c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470
-  new_leaf_account_rlp_array = [248, 71, 128, 131, 255, 255, 255, 160, 86, 232, 31, 23, 27, 204, 85, 166, 255, 131, 69, 230, 146, 192, 248, 110, 91, 72, 224, 27, 153, 108, 173, 192, 1, 98, 47, 181, 227, 99, 180, 33, 160, 197, 210, 70, 1, 134, 247, 35, 60, 146, 126, 125, 178, 220, 199, 3, 192, 229, 0, 182, 83, 202, 130, 39, 59, 123, 250, 216, 4, 93, 133, 164, 112];
-
-  let new_leaf_account_rlp = Uint8Array.wrap(new_leaf_account_rlp_array.buffer, 0, 73);
-  //debug_mem((new_leaf_account_rlp.buffer as usize) + new_leaf_account_rlp.byteOffset, new_leaf_account_rlp.byteLength);
-
-
-  insertNewLeafNewBranch(verified_prestate_root_ptr, key_nibbles, new_leaf_account_rlp);
-
-
-  let new_root_ptr = rehashNode(verified_prestate_root_ptr);
-  //debug_mem(new_root_ptr, 32);
-
-
-
-
-
-  eth2_savePostStateRoot(new_root_ptr);
-  return 1;
+  return verified_prestate_root_ptr
 
 }
 

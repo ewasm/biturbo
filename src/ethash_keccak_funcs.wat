@@ -1255,6 +1255,7 @@
 ;;(func $watimports.$ethash_keccak256 (param $p0 i32) (param $p1 i32) (param $p2 i32)
 (func $keccak/ethash_keccak256 (param $p0 i32) (param $p1 i32) (param $p2 i32)
     (local $l3 i32) (local $l4 i32) (local $l5 i32) (local $l6 i32) (local $l7 i32) (local $l8 i32) (local $l9 i32) (local $l10 i32) (local $l11 i32) (local $l12 i64) (local $l13 i64) (local $l14 i64) (local $l15 i64) (local $l16 i64) (local $l17 i64) (local $l18 i64) (local $l19 i64) (local $l20 i64) (local $l21 i64) (local $l22 i64) (local $l23 i64) (local $l24 i64) (local $l25 i64)
+    ;; (call $main/debug (i32.const 1)) ;; count number of times hash function is called
     (local.set $l8
       (global.get $g0_ethash_keccak))
     (global.set $g0_ethash_keccak
