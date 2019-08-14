@@ -97,7 +97,6 @@ export function main(): i32 {
 
 
 
-  /*
   // **** loop just verifying the prestate
   // verifyMultiproof does 4 calls to keccak256
   // 50 iterations does 200 calls to keccak256
@@ -105,9 +104,10 @@ export function main(): i32 {
     verified_prestate_root_ptr = verifyMultiproof(input_decoded);
   }
   eth2_savePostStateRoot(verified_prestate_root_ptr);
-  */
 
 
+
+  /*
   // **** update post-state
   // INPUT 2: address is another input, also hardcoded for testing.
   let address_hash = Array.create<u8>(32);
@@ -140,7 +140,7 @@ export function main(): i32 {
     new_root_ptr = calculated_poststate_ptr;
   }
   eth2_savePostStateRoot(new_root_ptr);
-
+  */
 
 
   return 1;
