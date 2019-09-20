@@ -1,0 +1,19 @@
+{
+  "name": "turbo-token",
+  "version": "0.0.1",
+  "description": "Stateless token based on turboproofs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "gulp",
+    "asbuild:untouched": "asc assembly/index.ts -b build/untouched.wasm -t build/untouched.wat --sourceMap --validate --debug",
+    "asbuild:optimized": "asc assembly/index.ts -b build/optimized.wasm -t build/optimized.wat --sourceMap --validate --optimize",
+    "asbuild": "npm run asbuild:untouched && npm run asbuild:optimized"
+  },
+  "devDependencies": {
+    "assemblyscript": "github:AssemblyScript/assemblyscript#22c4cf42f05bd8610e5f8924d27a5b8636405a6d",
+    "gulp": "^4.0.2",
+    "scout.ts": "github:ewasm/scout.ts",
+    "wabt": "^1.0.11"
+  }
+}
