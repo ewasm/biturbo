@@ -22,7 +22,7 @@ const wabt = require("wabt")();
 //(import "watimports" "$ethash_keccak256" (func $watimports.$ethash_keccak256 (type $t2)))
 //const ImportStatementToDelete = '(import "watimports" "$ethash_keccak256" (func $watimports.$ethash_keccak256 (type $t2)))';
 //const ImportStatementToDelete = '(import "watimports" "$ethash_keccak256" (func $watimports.$ethash_keccak256 (type 2)))';
-const ImportStatementToDelete = '(import "watimports" "$ethash_keccak256" (func $keccak/ethash_keccak256 (param i32 i32 i32)))';
+const ImportStatementToDelete = '(import "watimports" "$ethash_keccak256" (func $assembly/keccak/ethash_keccak256 (param i32 i32 i32)))';
 // (import "watimports" "$ethash_keccak256" (func $keccak/ethash_keccak256 (param i32 i32 i32)))
 
 
@@ -50,10 +50,10 @@ function build(callback) {
 
 
   asc.main([
-    "main.ts",
+    "assembly/main.ts",
     //"--baseDir", "assembly",
-    "--binaryFile", "out/main.wasm",
-    "--textFile", "out/main.wat",
+    "--binaryFile", "build/main.wasm",
+    "--textFile", "build/main.wat",
     "--sourceMap",
     "--measure",
     "--runtime", "none",
@@ -78,15 +78,15 @@ function build(callback) {
     //const utils = require("@wasm/studio-utils");
     //console.log("loading src/ethash_keccak_funcs.wat...");
     //const keccakWat = utils.project.getFile("src/ethash_keccak_funcs.wat").getData();
-    const keccakWat = fs.readFileSync("src/ethash_keccak_funcs.wat", "utf8");
+    const keccakWat = fs.readFileSync("assembly/src/ethash_keccak_funcs.wat", "utf8");
     //console.log("loaded keccak wat:", keccakWat);
     const keccakLines = keccakWat.split("\n")
 
 
     // wabt wat parsing might file on out/main.wat, but works if the wat doesn't names
-    console.log("loading out/main.wat...");
+    console.log("loading build/main.wat...");
     //const mainWat = utils.project.getFile("out/main.wat").getData();
-    const mainWat = fs.readFileSync("out/main.wat", "utf8");
+    const mainWat = fs.readFileSync("build/main.wat", "utf8");
 
 
     /*
@@ -144,7 +144,7 @@ function build(callback) {
     console.log('mainLines after deleting import statement:', mainLines.length);
 
     var merged_wat = mainLines.join("\n");
-    fs.writeFileSync("out/main_with_keccak_merged.wat", merged_wat);
+    fs.writeFileSync("build/main_with_keccak_merged.wat", merged_wat);
 
     var features = {'mutable_globals':false};
     var myModule = wabt.parseWat("main_with_keccak.wat", mainLines.join("\n"), features);
@@ -158,7 +158,7 @@ function build(callback) {
 
     //var wasm_output = utils.project.newFile("out/main_with_keccak.wasm", "wasm");
     //wasm_output.setData(binary_result.buffer);
-    fs.writeFileSync("out/main_with_keccak.wasm", binary_result.buffer);
+    fs.writeFileSync("build/main_with_keccak.wasm", binary_result.buffer);
 
     console.log('done merging wat codes.');
 
