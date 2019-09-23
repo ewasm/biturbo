@@ -1,5 +1,6 @@
 import { ethash_keccak256 } from "./keccak";
 import { hashBranchNode, RLPBranchNode, RLPData, decode, encode } from "./rlp";
+import { parseU8, debugMem, padBuf, cmpBuf, stripBuf, hash } from './util'
 
 @external("env", "debug_log")
 export declare function debug(a: i32): void;
@@ -19,6 +20,11 @@ export declare function eth2_loadPreStateRoot(offset: i32): void;
 @external("env", "eth2_savePostStateRoot")
 export declare function eth2_savePostStateRoot(offset: i32): void;
 
+@external("bignum", "add256")
+export declare function add256(aOffset: i32, bOffset: i32, cOffset: i32): void;
+
+@external("bignum", "sub256")
+export declare function sub256(aOffset: i32, bOffset: i32, cOffset: i32): void;
 
 enum NodeType {
   Leaf,
@@ -66,7 +72,6 @@ export function main(): i32 {
   let prestate_root_hash_data = Uint64Array.wrap(prestate_root_hash_buf, 0, 4);
   eth2_loadPreStateRoot(prestate_root_hash_buf as usize);
 
-
   // INPUT 2: proof data from the EEI
   let input_data_len = eth2_blockDataSize();
   let input_data_buff = new ArrayBuffer(input_data_len);
@@ -75,9 +80,115 @@ export function main(): i32 {
   let input_data = Uint8Array.wrap(input_data_buff, 0, input_data_len);
 
   // input data is RLP
+  //debug_mem(input_data.subarray(0, 100).buffer as usize, 100)
   let input_decoded = decode(input_data);
   // input_decoded is type RLPData: { buffer: Uint8Array, children: RLPData[] }
+  // [txes, addrs, hashes, leaves, instructions]
+  let hash1 = input_decoded.children[2].children[0].buffer
 
+  let txes = input_decoded.children[0].children
+  let addrs = input_decoded.children[1].children
+  let hashes = input_decoded.children[2].children
+  let leaves = input_decoded.children[3].children
+  let instructions = input_decoded.children[4].children
+
+  let updatedLeaves = new Array<Uint8Array | null>(leaves.length)
+
+  for (let i = 0; i < 2; i++) {
+    let tx = txes[i]
+    // [toIdx, value, nonce, fromIdx]
+    let toIdx = parseU8(tx.children[0].buffer)
+    let fromIdx = parseU8(tx.children[3].buffer)
+    let value = tx.children[1].buffer
+    let nonce = tx.children[2].buffer
+
+    // TODO: Hash unsigned tx, recover from address, check against fromIdx
+
+    let fromLeaf = leaves[fromIdx].buffer
+    // If `from` has been modified by previous txes
+    // load the updated one.
+    if (updatedLeaves[fromIdx] != null) {
+      fromLeaf = updatedLeaves[fromIdx] as Uint8Array
+    }
+
+    let toLeaf = leaves[toIdx].buffer
+    if (updatedLeaves[toIdx] != null) {
+      toLeaf = updatedLeaves[toIdx] as Uint8Array
+    }
+
+    let decodedFrom = decode(fromLeaf)
+    let decodedTo = decode(toLeaf)
+
+    let fromKey = decodedFrom.children[0]
+    let toKey = decodedTo.children[0]
+
+    let fromAccount = decode(decodedFrom.children[1].buffer).children
+    let toAccount = decode(decodedTo.children[1].buffer).children
+    // Sender's nonce should match tx's nonce
+    if (cmpBuf(fromAccount[0].buffer, nonce) != 0) {
+      throw new Error('Invalid nonce')
+    }
+
+    // Sender has enough balance
+    if (cmpBuf(fromAccount[1].buffer, value) == -1) {
+      throw new Error('Insufficient funds')
+    }
+
+    // Update nonce and balances
+    // TODO: too many memalloc and copy
+    let fromBalance = padBuf(fromAccount[1].buffer, 32)
+    let toBalance = padBuf(toAccount[1].buffer, 32)
+    value = padBuf(value, 32)
+    let paddedNonce = padBuf(nonce, 32)
+    let newFromBalance = new ArrayBuffer(32)
+    sub256(fromBalance.buffer as usize, value.buffer as usize, newFromBalance as usize)
+    let fromNonce = padBuf(fromAccount[0].buffer, 32)
+    let newFromNonce = new ArrayBuffer(32)
+    let one256 = new ArrayBuffer(32)
+    let onedv = new DataView(one256)
+    onedv.setUint8(31, 1)
+    add256(fromNonce.buffer as usize, one256 as usize, newFromNonce as usize)
+
+    let newToBalance = new ArrayBuffer(32)
+    add256(toBalance.buffer as usize, value.buffer as usize, newToBalance as usize)
+
+    // Encode updated accounts
+    let fromLeafRLPDataChildren = Array.create<RLPData>(2)
+    let fromLeafRLPData = new RLPData(null, fromLeafRLPDataChildren)
+    fromLeafRLPDataChildren.push(fromKey)
+    let fromAccountRLPDataChildren = Array.create<RLPData>(4)
+    let fromAccountRLPData = new RLPData(null, fromAccountRLPDataChildren)
+    fromAccountRLPDataChildren.push(new RLPData(stripBuf(Uint8Array.wrap(newFromNonce)), null))
+    fromAccountRLPDataChildren.push(new RLPData(stripBuf(Uint8Array.wrap(newFromBalance)), null))
+    fromAccountRLPDataChildren.push(fromAccount[2])
+    fromAccountRLPDataChildren.push(fromAccount[3])
+    let fromAccountRLP = encode(fromAccountRLPData)
+    // TODO: avoid extra encoding
+    fromLeafRLPDataChildren.push(new RLPData(fromAccountRLP, null))
+
+    let toLeafRLPDataChildren = Array.create<RLPData>(2)
+    let toLeafRLPData = new RLPData(null, toLeafRLPDataChildren)
+    toLeafRLPDataChildren.push(toKey)
+    let toAccountRLPDataChildren = Array.create<RLPData>(4)
+    let toAccountRLPData = new RLPData(null, toAccountRLPDataChildren)
+    toAccountRLPDataChildren.push(toAccount[0])
+    toAccountRLPDataChildren.push(new RLPData(stripBuf(Uint8Array.wrap(newToBalance)), null))
+    toAccountRLPDataChildren.push(toAccount[2])
+    toAccountRLPDataChildren.push(toAccount[3])
+    let toAccountRLP = encode(toAccountRLPData)
+    toLeafRLPDataChildren.push(new RLPData(toAccountRLP, null))
+
+    let newFromLeaf = encode(fromLeafRLPData)
+    let newToLeaf = encode(toLeafRLPData)
+
+    updatedLeaves[fromIdx] = newFromLeaf
+    updatedLeaves[toIdx] = newToLeaf
+  }
+
+  let keys = Array.create<Uint8Array>(addrs.length)
+  for (let i = 0; i < addrs.length; i++) {
+    keys.push(hash(addrs[i].buffer))
+  }
 
   let verified_prestate_root_ptr = verifyMultiproof(input_decoded);
 
