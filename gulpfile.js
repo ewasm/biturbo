@@ -107,6 +107,7 @@ function build(callback) {
     //console.log('mainWatReplaced:', mainWatReplaced)
     mainWatReplaced = mainWatReplaced.replace(/Map<usize,/g, "Map<usize");
     //console.log('mainWatReplaced:', mainWatReplaced)
+    mainWatReplaced = mainWatReplaced.replace(/Uint\d+Array \| null/g, "UintArrayOrNull");
 
     var mainLines = mainWatReplaced.split("\n");
     console.log("main wat line count:", mainLines.length);
