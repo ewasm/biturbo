@@ -1,6 +1,6 @@
-const tape = require('tape')
-const { main, decodeBlockData } = require('../dist/ee')
-const { generateTestSuite } = require('../dist/relayer/lib')
+import * as tape from 'tape'
+import { main, decodeBlockData } from '../src/ee'
+import { generateTestSuite } from '../src/relayer/lib'
 
 tape('turboproof ee', async t => {
   const testSuite = await generateTestSuite()
@@ -11,7 +11,7 @@ tape('turboproof ee', async t => {
   t.end()
 })
 
-function fromScout(path) {
+function fromScout(path: string) {
   const fs = require('fs')
   const yaml = require('js-yaml')
   const testCase = yaml.safeLoad(fs.readFileSync(path))

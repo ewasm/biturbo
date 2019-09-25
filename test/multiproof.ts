@@ -1,15 +1,15 @@
-const tape = require('tape')
-const promisify = require('util.promisify')
-const rlp = require('rlp')
-const { keccak256 } = require('ethereumjs-util')
-const Trie = require('merkle-patricia-tree/baseTrie')
-const SecureTrie = require('merkle-patricia-tree/secure')
-const {
+import * as tape from 'tape'
+import * as rlp from 'rlp'
+import { keccak256 } from 'ethereumjs-util'
+import {
   decodeMultiproof, rawMultiproof, encodeMultiproof,
   decodeInstructions, flatEncodeInstructions, flatDecodeInstructions,
   verifyMultiproof, makeMultiproof, Instruction, Opcode
-} = require('../dist/multiproof')
-const { lookupNode } = require('../dist/util')
+} from '../src/multiproof'
+import { lookupNode } from '../src/util'
+const promisify = require('util.promisify')
+const Trie = require('merkle-patricia-tree/baseTrie')
+const SecureTrie = require('merkle-patricia-tree/secure')
 
 tape('decode and encode instructions', (t) => {
   t.test('rlp encoding', (st) => {
@@ -20,6 +20,7 @@ tape('decode and encode instructions', (t) => {
       { kind: Opcode.Extension, value: [3, 3, 3, 3] },
       { kind: Opcode.Branch, value: 6 }
     ]
+    // @ts-ignore
     const res = decodeInstructions(rlp.decode(raw))
     st.deepEqual(expected, res)
     st.end()
@@ -78,8 +79,8 @@ tape('decode and encode multiproof', (t) => {
   })
 })
 
-tape('multiproof tests', (t) => {
-  t.skip('hash before nested nodes in branch', (st) => {
+tape('multiproof tests', (t: tape.Test) => {
+  tape.skip('hash before nested nodes in branch', (st) => {
     // TODO: Replace with valid multiproof
     const raw = Buffer.from('f876e1a01bbb8445ba6497d9a4642a114cb06b3a61ea8e49ca3853991b4f07b7e1e04892f845b843f8419f02020202020202020202020202020202020202020202020202020202020202a00000000000000000000000000000000000000000000000000000000000000000ccc20180c28001c2021fc20402', 'hex')
     const expectedRoot = Buffer.from('0d76455583723bb10c56d34cfad1fb218e692299ae2edb5dd56a950f7062a6e0', 'hex')
@@ -91,11 +92,11 @@ tape('multiproof tests', (t) => {
     ]
     const proof = decodeMultiproof(raw)
     st.deepEqual(proof.instructions, expectedInstructions)
-    st.assert(verifyMultiproof(expectedRoot, proof))
+    st.assert(verifyMultiproof(expectedRoot, proof, []))
     st.end()
   })
 
-  t.skip('two values', (st) => {
+  tape.skip('two values', (st) => {
     // TODO: Replace with valid multiproof
     const raw = Buffer.from('f8c1e1a09afbad9ae00ded5a066bd6f0ec67a45d51f31c258066b997e9bb8336bc13eba8f88ab843f8419f01010101010101010101010101010101010101010101010101010101010101a00101010101010101010101010101010101010101010101010101010101010101b843f8419f02020202020202020202020202020202020202020202020202020202020202a00000000000000000000000000000000000000000000000000000000000000000d2c2021fc28001c2021fc20402c20180c20408', 'hex')
     const expectedRoot = Buffer.from('32291409ceb27a3b68b6beff58cfc41c084c0bde9e6aca03a20ce9aa795bb248', 'hex')
@@ -109,7 +110,7 @@ tape('multiproof tests', (t) => {
     ]
     const proof = decodeMultiproof(raw)
     st.deepEqual(proof.instructions, expectedInstructions)
-    st.assert(verifyMultiproof(expectedRoot, proof))
+    st.assert(verifyMultiproof(expectedRoot, proof, []))
     st.end()
   })
 
@@ -122,11 +123,9 @@ tape('make multiproof', (t) => {
     const put = promisify(t.put.bind(t))
     const key = Buffer.from('1'.repeat(40), 'hex')
     await put(key, Buffer.from('ffff', 'hex'))
-    const leaf = await lookupNode(t, t.root)
+    const leaf: any = await lookupNode(t, t.root)
 
-    console.log('before makeMultiproof')
     const proof = await makeMultiproof(t, [key])
-    console.log('after makeMultiproof')
     st.deepEqual(proof, {
       hashes: [],
       keyvals: [leaf.serialize()],
@@ -218,11 +217,11 @@ tape('fuzz multiproof generation/verification with official tests', async (t) =>
     const testName = testCase.name
     t.comment(testName)
     const expect = Buffer.from(testCase.root.slice(2), 'hex')
-    const removedKeys = {}
+    const removedKeys: { [key: string]: boolean } = {}
     // Clean inputs
-    let inputs = testCase.input.map((input) => {
-      const res = [null, null]
-      for (i = 0; i < 2; i++) {
+    let inputs = testCase.input.map((input: any) => {
+      const res: any = [null, null]
+      for (let i = 0; i < 2; i++) {
         if (!input[i]) continue
         if (input[i].slice(0, 2) === '0x') {
           res[i] = Buffer.from(input[i].slice(2), 'hex')
@@ -231,7 +230,7 @@ tape('fuzz multiproof generation/verification with official tests', async (t) =>
         }
       }
       if (res[1] === null) {
-        removedKeys[res[0].toString('hex')] = true
+        removedKeys[res[0]!.toString('hex')] = true
       }
       return res
     })
@@ -249,7 +248,7 @@ tape('fuzz multiproof generation/verification with official tests', async (t) =>
 
     // TODO: include keys that have been removed from trie
     const keyCombinations = getCombinations(
-      inputs.map((i) => i[0]).filter((i) => removedKeys[i.toString('hex')] !== true)
+      inputs.map((i: any) => i[0]).filter((i: any) => removedKeys[i.toString('hex')] !== true)
     )
     for (let combination of keyCombinations) {
       // If using secure make sure to hash keys
@@ -275,7 +274,7 @@ tape('fuzz multiproof generation/verification with official tests', async (t) =>
 // Given array [a, b, c], produce combinations
 // with all lengths [1, arr.length]:
 // [[a], [b], [c], [a, b], [a, c], [b, c], [a, b, c]]
-function getCombinations(arr) {
+function getCombinations(arr: Buffer[]): Buffer[][] {
   // Make sure there are no duplicates
   for (let i = 0; i < arr.length; i++) {
     for (let j = i + 1; j < arr.length; j++) {
