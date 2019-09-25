@@ -4,16 +4,40 @@
   "description": "Stateless token based on turboproofs",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "gulp",
-    "asbuild:untouched": "asc assembly/index.ts -b build/untouched.wasm -t build/untouched.wat --sourceMap --validate --debug",
-    "asbuild:optimized": "asc assembly/index.ts -b build/optimized.wasm -t build/optimized.wat --sourceMap --validate --optimize",
-    "asbuild": "npm run asbuild:untouched && npm run asbuild:optimized"
+    "build": "ethereumjs-config-build",
+    "build:as": "gulp",
+    "tslint": "ethereumjs-config-tslint",
+    "tslint:fix": "ethereumjs-config-tslint-fix",
+    "lint": "ethereumjs-config-lint",
+    "lint:fix": "ethereumjs-config-lint-fix",
+    "format": "ethereumjs-config-format",
+    "format:fix": "ethereumjs-config-format-fix",
+    "formatTest": "node ./scripts/formatTest",
+    "tsc": "ethereumjs-config-tsc",
+    "test": "npm run build && tape ./test/multiproof.js"
   },
   "devDependencies": {
+    "@ethereumjs/config-nyc": "^1.1.1",
+    "@ethereumjs/config-prettier": "^1.1.1",
+    "@ethereumjs/config-tsc": "^1.1.1",
+    "@ethereumjs/config-tslint": "^1.1.1",
+    "@types/bn.js": "^4.11.5",
+    "@types/node": "^12.7.5",
     "assemblyscript": "github:AssemblyScript/assemblyscript#22c4cf42f05bd8610e5f8924d27a5b8636405a6d",
     "gulp": "^4.0.2",
+    "prettier": "^1.18.2",
     "scout.ts": "github:ewasm/scout.ts",
+    "tape": "^4.11.0",
+    "tslint": "^5.20.0",
+    "typescript": "^3.6.3",
+    "typestrict": "^1.0.2",
+    "util.promisify": "^1.0.0",
     "wabt": "^1.0.11"
+  },
+  "dependencies": {
+    "bn.js": "^5.0.0",
+    "ethereumjs-util": "^6.1.0",
+    "merkle-patricia-tree": "^3.0.0",
+    "rlp": "^2.2.3"
   }
 }
