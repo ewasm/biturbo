@@ -1,10 +1,11 @@
 import * as assert from 'assert'
 import { decode, encode } from 'rlp'
 import { keccak256 } from 'ethereumjs-util'
+import { addHexPrefix, removeHexPrefix, bufToU8, lookupNode } from './util'
 const promisify = require('util.promisify')
 const Trie = require('merkle-patricia-tree/baseTrie')
 const TrieNode = require('merkle-patricia-tree/trieNode')
-const { addHexPrefix, removeHexPrefix, stringToNibbles, nibblesToBuffer, getNodeType, isRawNode } = require('merkle-patricia-tree/trieNode')
+const { stringToNibbles, nibblesToBuffer, getNodeType, isRawNode } = require('merkle-patricia-tree/trieNode')
 const { matchingNibbleLength } = require('merkle-patricia-tree/util')
 
 export enum Opcode {
@@ -394,22 +395,4 @@ export function decodeInstructions(instructions: Buffer[][]) {
     }
   }
   return res
-}
-
-function bufToU8(b: Buffer): number {
-  // RLP decoding of 0 is empty buffer
-  if (b.length === 0) {
-    return 0
-  }
-  return b.readUInt8(0)
-}
-
-export function lookupNode(trie: any, hash: any) {
-  return new Promise((resolve, reject) => {
-    try {
-      trie._lookupNode(hash, (v: any) => resolve(v))
-    } catch (e) {
-      reject(e)
-    }
-  })
 }
