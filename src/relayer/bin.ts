@@ -11,7 +11,7 @@ function writeScoutConfig (data: TestSuite) {
   const testSuite = {
     'beacon_state': {
       'execution_scripts': [
-        'target/wasm32-unknown-unknown/release/turboproof.wasm'
+        'build/main_with_keccak.wasm'
       ],
     },
     'shard_pre_state': {

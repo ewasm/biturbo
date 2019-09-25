@@ -4,6 +4,8 @@
   "description": "Stateless token based on turboproofs",
   "main": "index.js",
   "scripts": {
+    "ee": "npm run build:as && scout.ts turboproof.yaml",
+    "relayer": "npm run build && ts-node src/relayer/bin.ts",
     "build": "ethereumjs-config-build",
     "build:as": "gulp",
     "tslint": "ethereumjs-config-tslint",

@@ -90,7 +90,8 @@ export function main(): i32 {
   let addrs = input_decoded.children[1].children
   let hashes = input_decoded.children[2].children
   let leaves = input_decoded.children[3].children
-  let instructions = input_decoded.children[4].children
+  // Instructions are flat-encoded
+  let instructions = input_decoded.children[4].buffer
 
   let updatedLeaves = new Array<Uint8Array | null>(leaves.length)
 
@@ -190,7 +191,9 @@ export function main(): i32 {
     keys.push(hash(addrs[i].buffer))
   }
 
+  debug(3)
   let verified_prestate_root_ptr = verifyMultiproof(hashes, leaves, instructions, keys);
+  debug(73)
 
   let verifiedPrestateRootBuf = new ArrayBuffer(32);
   // doing memory.copy here because we don't have the reference to the original backing buffer of verified_prestate_root_ptr, only the pointer
@@ -199,21 +202,13 @@ export function main(): i32 {
   let verified_prestate_root = Uint64Array.wrap(verifiedPrestateRootBuf, 0, 4);
 
   // TODO: make helper for hash comparison, and use @inline
-  if (  (verified_prestate_root[0] != prestate_root_hash_data[0])
+  if ((verified_prestate_root[0] != prestate_root_hash_data[0])
       || (verified_prestate_root[1] != prestate_root_hash_data[1])
       || (verified_prestate_root[2] != prestate_root_hash_data[2])
-      || (verified_prestate_root[3] != prestate_root_hash_data[3]) ) {
+      || (verified_prestate_root[3] != prestate_root_hash_data[3])) {
     throw new Error('hashes dont match!');
   }
 
-
-
-  // **** loop just verifying the prestate
-  // verifyMultiproof does 4 calls to keccak256
-  // 50 iterations does 200 calls to keccak256
-  /*for (let i = 0; i < 49; i++) {
-    verified_prestate_root_ptr = verifyMultiproof(input_decoded);
-  }*/
   eth2_savePostStateRoot(verified_prestate_root_ptr);
 
 
@@ -257,12 +252,39 @@ export function main(): i32 {
   return 1;
 }
 
+export enum Opcode {
+  Branch = 0,
+  Hasher = 1,
+  Leaf = 2,
+  Extension = 3,
+  Add = 4,
+}
 
-function verifyMultiproof(hashes: RLPData[], leaves: RLPData[], instructions: RLPData[], keys: Uint8Array[]): usize {
-  //debugMem(instructions[0].children[0].buffer)
-  //debugMem(instructions[0].children[1].buffer)
-  //for (let i = 0; i < instructions.length; i++) {
-  //}
+function verifyMultiproof(hashes: RLPData[], leaves: RLPData[], instructions: Uint8Array, keys: Uint8Array[]): usize {
+  let pc = 0
+  while (pc < instructions.length) {
+    let op = instructions[pc++]
+    switch (op) {
+      case Opcode.Hasher:
+        // TODO: push hash to stack
+        break
+      case Opcode.Leaf:
+        // TODO: push leaf to stack
+        break
+      case Opcode.Branch:
+        let idx = instructions[pc++]
+        break
+      case Opcode.Extension:
+        let nibblesLen = instructions[pc++]
+        let nibbles = new Uint8Array(nibblesLen)
+        memory.copy(nibbles.buffer as usize + nibbles.byteOffset, instructions.buffer as usize + instructions.byteOffset + pc, nibblesLen)
+        pc += nibblesLen
+        break
+      case Opcode.Add:
+        let idx = instructions[pc++]
+        break
+    }
+  }
 
   return 1
 }

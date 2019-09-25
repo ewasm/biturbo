@@ -55,10 +55,6 @@ export function verifyMultiproof(root: Buffer, proof: Multiproof, keys: Buffer[]
       if (!l) {
         throw new Error('Expected leaf in multiproof')
       }
-      // TODO: Nibble from prefix `digit`
-      // @ts-ignore
-      //stack.push([NodeType.Leaf, [l[0].slice(l[0].length - instr.value), l[1]]])
-      // Disregard leaf operand
       stack.push([NodeType.Leaf, [l[0], l[1]], [leafIdx - 1]])
       // @ts-ignore
       paths[leafIdx - 1] = removeHexPrefix(stringToNibbles(l[0]))
