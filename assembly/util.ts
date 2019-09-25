@@ -1,9 +1,9 @@
 import { ethash_keccak256 } from "./keccak";
 
-@external("env", "debug_mem")
+@external("debug", "debug_printMem")
 export declare function debug_mem(pos: i32, len: i32): void;
 
-@external("env", "debug_log")
+@external("debug", "debug_print32")
 export declare function debug(a: i32): void;
 
 export function parseU8(buf: Uint8Array): u8 {

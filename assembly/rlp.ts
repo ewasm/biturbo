@@ -2,10 +2,10 @@
 
 import { ethash_keccak256 } from "./keccak";
 
-@external("env", "debug_log")
+@external("debug", "debug_print32")
 export declare function debug(a: i32): void;
 
-@external("env", "debug_mem")
+@external("debug", "debug_printMem")
 export declare function debug_mem(pos: i32, len: i32): void;
 
 
@@ -375,7 +375,7 @@ export function _decode(input: Uint8Array): Decoded {
     let firstByte = input[0];
     if (firstByte <= 0x7f) {
         // a single byte whose value is in the [0x00, 0x7f] range, that byte is its own RLP encoding.
-        return new Decoded(new RLPData(input.subarray(0, 1),null), input.subarray(1));
+        return new Decoded(new RLPData(input.subarray(0, 1), null), input.subarray(1));
     } else if (firstByte <= 0xb7) {
         length = firstByte - 0x7f;
         if (firstByte == 0x80) {

@@ -2,10 +2,10 @@ import { ethash_keccak256 } from "./keccak";
 import { hashBranchNode, RLPBranchNode, RLPData, decode, encode } from "./rlp";
 import { parseU8, debugMem, padBuf, cmpBuf, stripBuf, hash } from './util'
 
-@external("env", "debug_log")
+@external("debug", "debug_print32")
 export declare function debug(a: i32): void;
 
-@external("env", "debug_mem")
+@external("debug", "debug_printMem")
 export declare function debug_mem(pos: i32, len: i32): void;
 
 @external("env", "eth2_blockDataSize")
@@ -190,7 +190,7 @@ export function main(): i32 {
     keys.push(hash(addrs[i].buffer))
   }
 
-  let verified_prestate_root_ptr = verifyMultiproof(input_decoded);
+  let verified_prestate_root_ptr = verifyMultiproof(hashes, leaves, instructions, keys);
 
   let verifiedPrestateRootBuf = new ArrayBuffer(32);
   // doing memory.copy here because we don't have the reference to the original backing buffer of verified_prestate_root_ptr, only the pointer
@@ -211,9 +211,9 @@ export function main(): i32 {
   // **** loop just verifying the prestate
   // verifyMultiproof does 4 calls to keccak256
   // 50 iterations does 200 calls to keccak256
-  for (let i = 0; i < 49; i++) {
+  /*for (let i = 0; i < 49; i++) {
     verified_prestate_root_ptr = verifyMultiproof(input_decoded);
-  }
+  }*/
   eth2_savePostStateRoot(verified_prestate_root_ptr);
 
 
@@ -258,8 +258,16 @@ export function main(): i32 {
 }
 
 
+function verifyMultiproof(hashes: RLPData[], leaves: RLPData[], instructions: RLPData[], keys: Uint8Array[]): usize {
+  //debugMem(instructions[0].children[0].buffer)
+  //debugMem(instructions[0].children[1].buffer)
+  //for (let i = 0; i < instructions.length; i++) {
+  //}
 
-function verifyMultiproof(input_decoded: RLPData): usize {
+  return 1
+}
+
+function verifyMultiproofOld(input_decoded: RLPData): usize {
 
   let accounts_sequence_encoded = input_decoded.children[0]; // accounts array to be further decoded
   let hashes_data = input_decoded.children[1].buffer; // 32-byte hashes, simply concatenated
