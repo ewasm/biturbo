@@ -4,9 +4,7 @@ import { keccak256, ecsign, stripZeros } from 'ethereumjs-util'
 import { encode } from 'rlp'
 import { Multiproof, verifyMultiproof, makeMultiproof, rawMultiproof } from '../multiproof'
 const assert = require('assert')
-const fs = require('fs')
 const { promisify } = require('util')
-const yaml = require('js-yaml')
 const Wallet = require('ethereumjs-wallet')
 const Trie = require('merkle-patricia-tree/secure')
 
@@ -27,11 +25,6 @@ interface AccountInfo {
   address: Buffer
   privateKey: Buffer
   account: Account
-}
-
-export async function main () {
-  const testSuite = await generateTestSuite()
-  writeScoutConfig(testSuite)
 }
 
 export async function generateTestSuite (): Promise<TestSuite> {
@@ -187,30 +180,4 @@ async function getAccount (trie: any, address: Buffer): Promise<Account> {
   } else {
     return new Account(raw)
   }
-}
-
-function writeScoutConfig (data: TestSuite) {
-  const testSuite = {
-    'beacon_state': {
-      'execution_scripts': [
-        'target/wasm32-unknown-unknown/release/turboproof.wasm'
-      ],
-    },
-    'shard_pre_state': {
-      'exec_env_states': [
-        data.preStateRoot.toString('hex')
-      ]
-    },
-    'shard_blocks': [
-      { env: 0, data: data.blockData.toString('hex') }
-    ],
-    'shard_post_state': {
-      'exec_env_states': [
-        data.postStateRoot.toString('hex')
-      ]
-    }
-  }
-
-  const serializedTestSuite = yaml.safeDump(testSuite)
-  fs.writeFileSync('turboproof.yaml', serializedTestSuite)
 }

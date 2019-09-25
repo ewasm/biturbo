@@ -14,7 +14,7 @@
     "format:fix": "ethereumjs-config-format-fix",
     "formatTest": "node ./scripts/formatTest",
     "tsc": "ethereumjs-config-tsc",
-    "test": "npm run build && tape ./test/multiproof.js"
+    "test": "npm run build && tape ./test/**/*.js"
   },
   "devDependencies": {
     "@ethereumjs/config-nyc": "^1.1.1",

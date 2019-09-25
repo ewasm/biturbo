@@ -7,9 +7,9 @@ const SecureTrie = require('merkle-patricia-tree/secure')
 const {
   decodeMultiproof, rawMultiproof, encodeMultiproof,
   decodeInstructions, flatEncodeInstructions, flatDecodeInstructions,
-  verifyMultiproof, makeMultiproof, Instruction, Opcode,
-  lookupNode
+  verifyMultiproof, makeMultiproof, Instruction, Opcode
 } = require('../dist/multiproof')
+const { lookupNode } = require('../dist/util')
 
 tape('decode and encode instructions', (t) => {
   t.test('rlp encoding', (st) => {
