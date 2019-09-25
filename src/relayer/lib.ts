@@ -30,12 +30,12 @@ interface AccountInfo {
 export async function generateTestSuite (): Promise<TestSuite> {
   const trie = new Trie()
   // Generate random accounts
-  let accounts = await generateAccounts(trie, 5000)
+  const accounts = await generateAccounts(trie, 5000)
 
   const preStateRoot = trie.root
 
   // Generate txes
-  let [txes, addrs, multiproof, simulationData] = await generateTxes(trie, accounts, 70)
+  const [txes, addrs, multiproof, simulationData] = await generateTxes(trie, accounts, 70)
 
   // Serialize witnesses and tx data
   const blockData = encode([txes, addrs, ...rawMultiproof(multiproof as Multiproof, true)])
@@ -54,8 +54,8 @@ export async function generateTestSuite (): Promise<TestSuite> {
 }
 
 async function generateTxes (trie: any, accounts: AccountInfo[], count=50) {
-  let txes = []
-  let simulationData = []
+  const txes = []
+  const simulationData = []
   const root = trie.root
   const toProve: any = {}
   for (let i = 0; i < count; i++) {
@@ -132,7 +132,7 @@ async function generateTxes (trie: any, accounts: AccountInfo[], count=50) {
 }
 
 async function transfer (trie: any, tx: SimulationData) {
-  let { from, to, value, nonce } = tx
+  const { from, to, value, nonce } = tx
   assert(value.gten(0))
 
   const fromAcc = await getAccount(trie, from)
@@ -152,12 +152,12 @@ async function transfer (trie: any, tx: SimulationData) {
 }
 
 async function generateAccounts (trie: any, count=500): Promise<AccountInfo[]> {
-  let accounts = []
+  const accounts = []
   for (let i = 0; i < count; i++) {
-    let wallet = Wallet.generate()
-    let address = wallet.getAddress()
-    let privateKey = wallet.getPrivateKey()
-    let account = new Account()
+    const wallet = Wallet.generate()
+    const address = wallet.getAddress()
+    const privateKey = wallet.getPrivateKey()
+    const account = new Account()
     account.balance = new BN('ffffff', 16).toBuffer()
     accounts.push({
       address,
@@ -174,7 +174,7 @@ async function putAccount (trie: any, address: Buffer, account: Account) {
 }
 
 async function getAccount (trie: any, address: Buffer): Promise<Account> {
-  let raw = await promisify(trie.get.bind(trie))(address)
+  const raw = await promisify(trie.get.bind(trie))(address)
   if (!raw) {
     return new Account()
   } else {

@@ -1,3 +1,4 @@
+// tslint:disable:no-console
 import { generateTestSuite, TestSuite } from './lib'
 const fs = require('fs')
 const yaml = require('js-yaml')
