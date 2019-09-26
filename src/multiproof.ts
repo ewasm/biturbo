@@ -5,7 +5,12 @@ import { addHexPrefix, removeHexPrefix, bufToU8, lookupNode } from './util'
 const promisify = require('util.promisify')
 const Trie = require('merkle-patricia-tree/baseTrie')
 const TrieNode = require('merkle-patricia-tree/trieNode')
-const { stringToNibbles, nibblesToBuffer, getNodeType, isRawNode } = require('merkle-patricia-tree/trieNode')
+const {
+  stringToNibbles,
+  nibblesToBuffer,
+  getNodeType,
+  isRawNode,
+} = require('merkle-patricia-tree/trieNode')
 const { matchingNibbleLength } = require('merkle-patricia-tree/util')
 
 export enum Opcode {
@@ -176,11 +181,7 @@ export async function makeMultiproof(trie: any, keys: Buffer[]): Promise<Multipr
   return _makeMultiproof(trie, trie.root, keysNibbles)
 }
 
-async function _makeMultiproof(
-  trie: any,
-  rootHash: any,
-  keys: number[][],
-): Promise<Multiproof> {
+async function _makeMultiproof(trie: any, rootHash: any, keys: number[][]): Promise<Multiproof> {
   let proof: Multiproof = {
     hashes: [],
     keyvals: [],

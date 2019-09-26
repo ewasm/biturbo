@@ -27,7 +27,7 @@ interface AccountInfo {
   account: Account
 }
 
-export async function generateTestSuite (): Promise<TestSuite> {
+export async function generateTestSuite(): Promise<TestSuite> {
   const trie = new Trie()
   // Generate random accounts
   const accounts = await generateAccounts(trie, 5000)
@@ -42,18 +42,18 @@ export async function generateTestSuite (): Promise<TestSuite> {
   console.log(`block data length: ${blockData.length}`)
 
   // Apply txes on top of trie to compute post state root
-  for (const tx of (simulationData as SimulationData[])) {
+  for (const tx of simulationData as SimulationData[]) {
     await transfer(trie, tx)
   }
 
   return {
     preStateRoot,
     blockData,
-    postStateRoot: trie.root
+    postStateRoot: trie.root,
   }
 }
 
-async function generateTxes (trie: any, accounts: AccountInfo[], count=50) {
+async function generateTxes(trie: any, accounts: AccountInfo[], count = 50) {
   const txes = []
   const simulationData = []
   const root = trie.root
@@ -79,7 +79,11 @@ async function generateTxes (trie: any, accounts: AccountInfo[], count=50) {
     }
     toProve[toKey].push({ txId: i, fieldIdx: 0 })
 
-    const txRlp = encode([to, stripZeros(value.toBuffer('be', 32)), stripZeros(nonce.toBuffer('be', 32))])
+    const txRlp = encode([
+      to,
+      stripZeros(value.toBuffer('be', 32)),
+      stripZeros(nonce.toBuffer('be', 32)),
+    ])
     const txHash = keccak256(txRlp)
     const txSig = ecsign(txHash, accounts[i].privateKey)
     assert(txSig.r.byteLength === 32)
@@ -89,14 +93,19 @@ async function generateTxes (trie: any, accounts: AccountInfo[], count=50) {
     v[0] = txSig.v
     const sigBytes = Buffer.concat([txSig.r, txSig.s, v], 65)
 
-    txes.push([to, stripZeros(value.toBuffer('be', 32)), stripZeros(nonce.toBuffer('be', 32)), from])
+    txes.push([
+      to,
+      stripZeros(value.toBuffer('be', 32)),
+      stripZeros(nonce.toBuffer('be', 32)),
+      from,
+    ])
     //txes.push([to, stripZeros(value.toBuffer('be', 32)), stripZeros(nonce.toBuffer('be', 32)), sigBytes])
     //txes.push([to, stripZeros(value.toBuffer('be', 32)), stripZeros(nonce.toBuffer('be', 32)), [stripZeros(txSig.r), stripZeros(txSig.s), txSig.v]])
     //txes.push([to, stripZeros(value.toBuffer('be', 32)), stripZeros(nonce.toBuffer('be', 32)), from])
   }
   // Make sure keys are unique and sort them
-  const unsortedAddrs = Object.keys(toProve).map((s) => Buffer.from(s, 'hex'))
-  const keys = unsortedAddrs.map((a) => keccak256(a))
+  const unsortedAddrs = Object.keys(toProve).map(s => Buffer.from(s, 'hex'))
+  const keys = unsortedAddrs.map(a => keccak256(a))
   keys.sort(Buffer.compare)
   // Sort addresses based on their hashes.
   // Naive algorithm
@@ -131,7 +140,7 @@ async function generateTxes (trie: any, accounts: AccountInfo[], count=50) {
   return [txes, sortedAddrs, proof, simulationData]
 }
 
-async function transfer (trie: any, tx: SimulationData) {
+async function transfer(trie: any, tx: SimulationData) {
   const { from, to, value, nonce } = tx
   assert(value.gten(0))
 
@@ -151,7 +160,7 @@ async function transfer (trie: any, tx: SimulationData) {
   await putAccount(trie, to, toAcc)
 }
 
-async function generateAccounts (trie: any, count=500): Promise<AccountInfo[]> {
+async function generateAccounts(trie: any, count = 500): Promise<AccountInfo[]> {
   const accounts = []
   for (let i = 0; i < count; i++) {
     const wallet = Wallet.generate()
@@ -162,18 +171,18 @@ async function generateAccounts (trie: any, count=500): Promise<AccountInfo[]> {
     accounts.push({
       address,
       privateKey,
-      account
+      account,
     })
     await putAccount(trie, address, account)
   }
   return accounts
 }
 
-async function putAccount (trie: any, address: Buffer, account: Account) {
+async function putAccount(trie: any, address: Buffer, account: Account) {
   await promisify(trie.put.bind(trie))(address, account.serialize())
 }
 
-async function getAccount (trie: any, address: Buffer): Promise<Account> {
+async function getAccount(trie: any, address: Buffer): Promise<Account> {
   const raw = await promisify(trie.get.bind(trie))(address)
   if (!raw) {
     return new Account()
