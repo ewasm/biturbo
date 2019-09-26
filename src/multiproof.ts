@@ -42,6 +42,7 @@ export function verifyMultiproof(root: Buffer, proof: Multiproof, keys: Buffer[]
   let leafIdx = 0
   let hashIdx = 0
   const paths = new Array(leaves.length).fill(undefined)
+  const hashStack: any[] = []
 
   for (const instr of proof.instructions) {
     if (instr.kind === Opcode.Hasher) {
@@ -50,12 +51,16 @@ export function verifyMultiproof(root: Buffer, proof: Multiproof, keys: Buffer[]
         throw new Error('Not enough hashes in multiproof')
       }
       stack.push([NodeType.Hash, [h], []])
+      hashStack.push(h.length < 32 ? decode(h) : h)
     } else if (instr.kind === Opcode.Leaf) {
       const l = leaves[leafIdx++]
       if (!l) {
         throw new Error('Expected leaf in multiproof')
       }
       stack.push([NodeType.Leaf, [l[0], l[1]], [leafIdx - 1]])
+      const raw = [l[0], l[1]]
+      const e = encode(raw)
+      hashStack.push(e.length >= 32 ? keccak256(e) : raw)
       // @ts-ignore
       paths[leafIdx - 1] = removeHexPrefix(stringToNibbles(l[0]))
     } else if (instr.kind === Opcode.Branch) {
@@ -66,6 +71,12 @@ export function verifyMultiproof(root: Buffer, proof: Multiproof, keys: Buffer[]
       const children = new Array(16).fill(null)
       children[instr.value as number] = n
       stack.push([NodeType.Branch, children, n[2].slice()])
+
+      const nh = popFromHashStack(hashStack, n[0])
+      const sponge = new Array(17).fill(Buffer.alloc(0))
+      sponge[instr.value as number] = nh
+      hashStack.push(sponge)
+
       for (let i = 0; i < n[2].length; i++) {
         paths[n[2][i]] = [instr.value as number, ...paths[n[2][i]]]
       }
@@ -75,6 +86,16 @@ export function verifyMultiproof(root: Buffer, proof: Multiproof, keys: Buffer[]
         throw new Error('Stack underflow')
       }
       stack.push([NodeType.Extension, [instr.value, n], n[2].slice()])
+
+      // Fetch child's hash from hashStack or compute if
+      // it's a branch
+      const nh = popFromHashStack(hashStack, n[0])
+      // Compute the extension node's hash and push to hashStack
+      const raw = [nibblesToBuffer(addHexPrefix(instr.value as number[], false)), nh]
+      const e = encode(raw)
+      const h = e.length >= 32 ? keccak256(e) : raw
+      hashStack.push(h)
+
       for (let i = 0; i < n[2].length; i++) {
         paths[n[2][i]] = [...(instr.value as number[]), ...paths[n[2][i]]]
       }
@@ -89,6 +110,13 @@ export function verifyMultiproof(root: Buffer, proof: Multiproof, keys: Buffer[]
       n2[1][instr.value as number] = n1
       n2[2] = Array.from(new Set([...n1[2], ...n2[2]]))
       stack.push(n2)
+
+      const nh = popFromHashStack(hashStack, n1[0])
+      const sponge = hashStack.pop()
+      assert(Array.isArray(sponge))
+      sponge[instr.value as number] = nh
+      hashStack.push(sponge)
+
       for (let i = 0; i < n1[2].length; i++) {
         paths[n1[2][i]] = [instr.value as number, ...paths[n1[2][i]]]
       }
@@ -97,69 +125,38 @@ export function verifyMultiproof(root: Buffer, proof: Multiproof, keys: Buffer[]
     }
   }
 
-  const r = stack.pop()
-  if (!r) {
-    throw new Error('Expected root node on top of stack')
-  }
-  let h = hashTrie(r)
-  // Special case, if trie contains only one leaf
-  // and that leaf has length < 32
-  if (h.length < 32) {
-    h = keccak256(encode(h))
-  }
-
   // Assuming sorted keys
   for (let i = 0; i < paths.length; i++) {
     const addr = nibblesToBuffer(paths[i])
     assert(addr.equals(keys[i]))
   }
+
+  const r = stack.pop()
+  if (!r) {
+    throw new Error('Expected root node on top of stack')
+  }
+
+  let h = hashStack.pop()
+  // Special case, if trie contains only one leaf
+  // and that leaf has length < 32
+  if (Array.isArray(h)) {
+    h = keccak256(encode(h))
+  }
+
   return h.equals(root)
 }
 
-function hashTrie(node: any): Buffer {
-  const typ = node[0]
-  node = node[1]
-  if (typ === NodeType.Branch) {
-    const res = new Array(17).fill(Buffer.alloc(0))
-    for (let i = 0; i < 16; i++) {
-      if (node[i] === null) {
-        continue
-      }
-      res[i] = hashTrie(node[i])
-    }
-    const e = encode(res)
-    if (e.length > 32) {
-      return keccak256(e)
-    } else {
-      return e
-    }
-  } else if (typ === NodeType.Leaf) {
-    const e = encode(node)
-    if (e.length > 32) {
-      return keccak256(e)
-    } else {
-      return node
-    }
-  } else if (typ === NodeType.Hash) {
-    // TODO: What if it's an embedded node with length === 32?
-    // Maybe try decoding and if it fails assume it's a hash
-    if (node[0].length < 32) {
-      // Embedded node, decode to get correct serialization for parent node
-      return decode(node[0]) as Buffer
-    }
-    return node[0]
-  } else if (typ === NodeType.Extension) {
-    const hashedNode = hashTrie(node[1])
-    node = [nibblesToBuffer(addHexPrefix(node[0], false)), hashedNode]
-    const e = encode(node)
-    if (e.length > 32) {
-      return keccak256(e)
-    } else {
-      return e
-    }
+function popFromHashStack(hashStack: any[], nodeType: NodeType): Buffer {
+  let nh: Buffer
+  if (nodeType === NodeType.Branch) {
+    const sponge = hashStack.pop()
+    assert(Array.isArray(sponge) && sponge.length === 17)
+    const e = encode(sponge)
+    nh = e.length >= 32 ? keccak256(e) : sponge
   } else {
-    throw new Error('Invalid node')
+    nh = hashStack.pop()
   }
+  return nh
 }
 
 export async function makeMultiproof(trie: any, keys: Buffer[]): Promise<Multiproof> {
@@ -391,4 +388,51 @@ export function decodeInstructions(instructions: Buffer[][]) {
     }
   }
   return res
+}
+
+/*
+ * @deprecated
+ */
+function hashTrie(node: any): Buffer {
+  const typ = node[0]
+  node = node[1]
+  if (typ === NodeType.Branch) {
+    const res = new Array(17).fill(Buffer.alloc(0))
+    for (let i = 0; i < 16; i++) {
+      if (node[i] === null) {
+        continue
+      }
+      res[i] = hashTrie(node[i])
+    }
+    const e = encode(res)
+    if (e.length >= 32) {
+      return keccak256(e)
+    } else {
+      return e
+    }
+  } else if (typ === NodeType.Leaf) {
+    const e = encode(node)
+    if (e.length >= 32) {
+      return keccak256(e)
+    } else {
+      return node
+    }
+  } else if (typ === NodeType.Hash) {
+    if (node[0].length < 32) {
+      // Embedded node, decode to get correct serialization for parent node
+      return decode(node[0]) as Buffer
+    }
+    return node[0]
+  } else if (typ === NodeType.Extension) {
+    const hashedNode = hashTrie(node[1])
+    node = [nibblesToBuffer(addHexPrefix(node[0], false)), hashedNode]
+    const e = encode(node)
+    if (e.length >= 32) {
+      return keccak256(e)
+    } else {
+      return e
+    }
+  } else {
+    throw new Error('Invalid node')
+  }
 }
