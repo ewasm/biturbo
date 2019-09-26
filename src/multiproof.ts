@@ -41,9 +41,11 @@ export interface Multiproof {
 
 export interface StackItem {
   kind: NodeType
+  // For now keeping raw for re-constructuring trie
   raw: any
   pathIndices: number[]
-  hash: any // Buffer or raw (for embedded nodes)
+  // Buffer or raw (for embedded nodes), or sponge for branch
+  hash: any
 }
 
 export function verifyMultiproof(root: Buffer, proof: Multiproof, keys: Buffer[]): boolean {
