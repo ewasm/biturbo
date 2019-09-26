@@ -93,7 +93,7 @@ export function verifyMultiproof(root: Buffer, proof: Multiproof, keys: Buffer[]
       // Compute the extension node's hash and push to hashStack
       const raw = [nibblesToBuffer(addHexPrefix(instr.value as number[], false)), nh]
       const e = encode(raw)
-      const h = e.length >= 32 ? keccak256(e) : e
+      const h = e.length >= 32 ? keccak256(e) : raw
       hashStack.push(h)
 
       for (let i = 0; i < n[2].length; i++) {
@@ -152,7 +152,7 @@ function popFromHashStack(hashStack: any[], nodeType: NodeType): Buffer {
     const sponge = hashStack.pop()
     assert(Array.isArray(sponge) && sponge.length === 17)
     const e = encode(sponge)
-    nh = e.length >= 32 ? keccak256(e) : e
+    nh = e.length >= 32 ? keccak256(e) : sponge
   } else {
     nh = hashStack.pop()
   }
