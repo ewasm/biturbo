@@ -26,15 +26,23 @@ export declare function add256(aOffset: i32, bOffset: i32, cOffset: i32): void;
 @external("bignum", "sub256")
 export declare function sub256(aOffset: i32, bOffset: i32, cOffset: i32): void;
 
-enum NodeType {
-  Leaf,
-  Branch,
-};
 
+export enum Opcode {
+  Branch = 0,
+  Hasher = 1,
+  Leaf = 2,
+  Extension = 3,
+  Add = 4,
+}
 
+export enum NodeType {
+  Branch = 0,
+  Leaf = 1,
+  Extension = 2,
+  Hash = 3,
+}
 
 // for Map<UintArray,Node> binaryen toText generates function names with commas, which wabt doesn't like.
-
 var Trie = new Map<usize,Node>();
 
 
@@ -68,9 +76,9 @@ export function main(): i32 {
 
 
   // INPUT 1: pre-state root
-  let prestate_root_hash_buf = new ArrayBuffer(32);
-  let prestate_root_hash_data = Uint64Array.wrap(prestate_root_hash_buf, 0, 4);
-  eth2_loadPreStateRoot(prestate_root_hash_buf as usize);
+  let preStateRootBuf = new ArrayBuffer(32)
+  let preStateRoot = Uint8Array.wrap(preStateRootBuf, 0, 32)
+  eth2_loadPreStateRoot(preStateRootBuf as usize)
 
   // INPUT 2: proof data from the EEI
   let input_data_len = eth2_blockDataSize();
@@ -191,25 +199,29 @@ export function main(): i32 {
     keys.push(hash(addrs[i].buffer))
   }
 
-  debug(3)
-  let verified_prestate_root_ptr = verifyMultiproof(hashes, leaves, instructions, keys);
-  debug(73)
+  let verifiedPreStateRoot = verifyMultiproof(hashes, leaves, instructions, keys)
 
-  let verifiedPrestateRootBuf = new ArrayBuffer(32);
+  if (cmpBuf(verifiedPreStateRoot, preStateRoot) != 0) {
+    throw new Error('Invalid pre state root')
+  }
+
+  eth2_savePostStateRoot(verifiedPreStateRoot.buffer as usize + verifiedPreStateRoot.byteOffset)
+
+  //let verifiedPrestateRootBuf = new ArrayBuffer(32);
   // doing memory.copy here because we don't have the reference to the original backing buffer of verified_prestate_root_ptr, only the pointer
   // TODO: try dereferencing the pointer instead of recreating an arraybuffer
-  memory.copy((verifiedPrestateRootBuf as usize), verified_prestate_root_ptr, 32);
-  let verified_prestate_root = Uint64Array.wrap(verifiedPrestateRootBuf, 0, 4);
+  //memory.copy((verifiedPrestateRootBuf as usize), verified_prestate_root_ptr, 32);
+  //let verified_prestate_root = Uint64Array.wrap(verifiedPrestateRootBuf, 0, 4);
 
   // TODO: make helper for hash comparison, and use @inline
-  if ((verified_prestate_root[0] != prestate_root_hash_data[0])
+  /*if ((verified_prestate_root[0] != prestate_root_hash_data[0])
       || (verified_prestate_root[1] != prestate_root_hash_data[1])
       || (verified_prestate_root[2] != prestate_root_hash_data[2])
       || (verified_prestate_root[3] != prestate_root_hash_data[3])) {
     throw new Error('hashes dont match!');
-  }
+  }*/
 
-  eth2_savePostStateRoot(verified_prestate_root_ptr);
+  //eth2_savePostStateRoot(verified_prestate_root_ptr);
 
 
 
@@ -252,41 +264,123 @@ export function main(): i32 {
   return 1;
 }
 
-export enum Opcode {
-  Branch = 0,
-  Hasher = 1,
-  Leaf = 2,
-  Extension = 3,
-  Add = 4,
+class StackItem {
+  constructor(
+    public kind: NodeType,
+    public hash: Uint8Array | null,
+    public sponge: RLPData | null,
+  ) {}
+
 }
 
-function verifyMultiproof(hashes: RLPData[], leaves: RLPData[], instructions: Uint8Array, keys: Uint8Array[]): usize {
+function verifyMultiproof(hashes: RLPData[], leaves: RLPData[], instructions: Uint8Array, keys: Uint8Array[]): Uint8Array {
   let pc = 0
+  let hashIdx = 0
+  let leafIdx = 0
+  let stack = Array.create<StackItem>(100)
+  let stackTop = 0
+
   while (pc < instructions.length) {
     let op = instructions[pc++]
     switch (op) {
       case Opcode.Hasher:
-        // TODO: push hash to stack
+        if (hashIdx >= hashes.length) {
+          throw new Error('Not enough hashes in multiproof')
+        }
+        let h = hashes[hashIdx++].buffer
+        stack[stackTop++] = new StackItem(NodeType.Hash, h, null)
         break
       case Opcode.Leaf:
-        // TODO: push leaf to stack
+        if (leafIdx >= leaves.length) {
+          throw new Error('Not enough leaves in multiproof')
+        }
+        let l = leaves[leafIdx++].buffer
+        let h = hash(l)
+        stack[stackTop++] = new StackItem(NodeType.Leaf, h, null)
         break
       case Opcode.Branch:
         let idx = instructions[pc++]
+        let n = stack[--stackTop]
+
+        let children = Array.create<RLPData>(17)
+        let branch = new RLPData(null, children)
+        for (let i = 0; i < 17; i++) {
+          children.push(new RLPData(null, Array.create<RLPData>(0)))
+        }
+        if (n.kind == NodeType.Branch) {
+          let e = encode(n.sponge as RLPData)
+          let h = hash(e)
+          children[idx].buffer = h
+        } else {
+          children[idx].buffer = n.hash as Uint8Array
+        }
+
+        stack[stackTop++] = new StackItem(NodeType.Branch, null, branch)
         break
       case Opcode.Extension:
         let nibblesLen = instructions[pc++]
-        let nibbles = new Uint8Array(nibblesLen)
-        memory.copy(nibbles.buffer as usize + nibbles.byteOffset, instructions.buffer as usize + instructions.byteOffset + pc, nibblesLen)
+        let nibbles = Array.create<u8>(nibblesLen)
+        //memory.copy(nibbles.buffer as usize + nibbles.byteOffset, instructions.buffer as usize + instructions.byteOffset + pc, nibblesLen)
+        for (let i = 0; i < (nibblesLen as i32); i++) {
+          nibbles[i] = instructions[pc + i]
+        }
         pc += nibblesLen
+
+        let n = stack[--stackTop]
+        let childHash: Uint8Array
+        if (n.kind == NodeType.Branch) {
+          let e = encode(n.sponge as RLPData)
+          let h = hash(e)
+          childHash = h
+        } else {
+          childHash = n.hash as Uint8Array
+        }
+
+        let key = nibbleArrToUintArr(addHexPrefix(nibbles, false))
+        let raw = Array.create<RLPData>(2)
+        let node = new RLPData(null, raw)
+        raw[0] = new RLPData(key, null)
+        raw[1] = new RLPData(childHash, null)
+        let e = encode(node)
+        let h = hash(e)
+
+        stack[stackTop++] = new StackItem(NodeType.Extension, h, null)
+
         break
       case Opcode.Add:
+        let n1 = stack[--stackTop]
+        let n2 = stack[--stackTop]
         let idx = instructions[pc++]
+
+        if (n2.kind != NodeType.Branch) {
+          throw new Error('Expected branch on top of stack')
+        }
+
+        let childHash: Uint8Array
+        if (n1.kind == NodeType.Branch) {
+          let e = encode(n1.sponge as RLPData)
+          let h = hash(e)
+          childHash = h
+        } else {
+          childHash = n1.hash as Uint8Array
+        }
+
+        n2.sponge.children[idx].buffer = childHash
+        stack[stackTop++] = n2
         break
     }
   }
 
-  return 1
+  let r = stack[stackTop - 1]
+  let rootHash: Uint8Array
+  if (r.kind == NodeType.Branch) {
+    let e = encode(r.sponge as RLPData)
+    rootHash = hash(e)
+  } else {
+    rootHash = r.hash as Uint8Array
+  }
+
+  return rootHash
 }
 
 function verifyMultiproofOld(input_decoded: RLPData): usize {
@@ -695,7 +789,7 @@ function addHexPrefix(key_nib_arr: Array<u8>, terminator: bool): Array<u8> {
   }
 
   if (terminator) {
-    key_nib_arr[0] += 2;
+    key_nib_arr[0] = key_nib_arr[0] + 2;
   }
 
   return key_nib_arr;
