@@ -39,15 +39,21 @@ export interface Multiproof {
   instructions: Instruction[]
 }
 
+export interface StackItem {
+  kind: NodeType
+  raw: any
+  pathIndices: number[]
+  hash: any // Buffer or raw (for embedded nodes)
+}
+
 export function verifyMultiproof(root: Buffer, proof: Multiproof, keys: Buffer[]): boolean {
-  const stack: any[] = []
+  const stack: StackItem[] = []
 
   const leaves = proof.keyvals.map((l: Buffer) => decode(l))
   assert(leaves.length === keys.length)
   let leafIdx = 0
   let hashIdx = 0
   const paths = new Array(leaves.length).fill(undefined)
-  const hashStack: any[] = []
 
   for (const instr of proof.instructions) {
     if (instr.kind === Opcode.Hasher) {
@@ -55,17 +61,15 @@ export function verifyMultiproof(root: Buffer, proof: Multiproof, keys: Buffer[]
       if (!h) {
         throw new Error('Not enough hashes in multiproof')
       }
-      stack.push([NodeType.Hash, [h], []])
-      hashStack.push(h.length < 32 ? decode(h) : h)
+      stack.push({ kind: NodeType.Hash, raw: [h], pathIndices: [], hash: h.length < 32 ? decode(h) : h })
     } else if (instr.kind === Opcode.Leaf) {
       const l = leaves[leafIdx++]
       if (!l) {
         throw new Error('Expected leaf in multiproof')
       }
-      stack.push([NodeType.Leaf, [l[0], l[1]], [leafIdx - 1]])
       const raw = [l[0], l[1]]
       const e = encode(raw)
-      hashStack.push(e.length >= 32 ? keccak256(e) : raw)
+      stack.push({ kind: NodeType.Leaf, raw: [l[0], l[1]], pathIndices: [leafIdx - 1], hash: e.length >= 32 ? keccak256(e) : raw })
       // @ts-ignore
       paths[leafIdx - 1] = removeHexPrefix(stringToNibbles(l[0]))
     } else if (instr.kind === Opcode.Branch) {
@@ -75,34 +79,40 @@ export function verifyMultiproof(root: Buffer, proof: Multiproof, keys: Buffer[]
       }
       const children = new Array(16).fill(null)
       children[instr.value as number] = n
-      stack.push([NodeType.Branch, children, n[2].slice()])
 
-      const nh = popFromHashStack(hashStack, n[0])
+      let nh = n.hash
+      if (n.kind === NodeType.Branch) {
+        nh = hashBranch(nh)
+      }
       const sponge = new Array(17).fill(Buffer.alloc(0))
       sponge[instr.value as number] = nh
-      hashStack.push(sponge)
 
-      for (let i = 0; i < n[2].length; i++) {
-        paths[n[2][i]] = [instr.value as number, ...paths[n[2][i]]]
+      stack.push({ kind: NodeType.Branch, raw: children, pathIndices: n.pathIndices.slice(), hash: sponge })
+
+      for (let i = 0; i < n.pathIndices.length; i++) {
+        paths[n.pathIndices[i]] = [instr.value as number, ...paths[n.pathIndices[i]]]
       }
     } else if (instr.kind === Opcode.Extension) {
       const n = stack.pop()
       if (!n) {
         throw new Error('Stack underflow')
       }
-      stack.push([NodeType.Extension, [instr.value, n], n[2].slice()])
 
       // Fetch child's hash from hashStack or compute if
       // it's a branch
-      const nh = popFromHashStack(hashStack, n[0])
+      let nh = n.hash
+      if (n.kind === NodeType.Branch) {
+        nh = hashBranch(nh)
+      }
       // Compute the extension node's hash and push to hashStack
       const raw = [nibblesToBuffer(addHexPrefix(instr.value as number[], false)), nh]
       const e = encode(raw)
       const h = e.length >= 32 ? keccak256(e) : raw
-      hashStack.push(h)
 
-      for (let i = 0; i < n[2].length; i++) {
-        paths[n[2][i]] = [...(instr.value as number[]), ...paths[n[2][i]]]
+      stack.push({ kind: NodeType.Extension, raw: [instr.value, n], pathIndices: n.pathIndices.slice(), hash: h })
+
+      for (let i = 0; i < n.pathIndices.length; i++) {
+        paths[n.pathIndices[i]] = [...(instr.value as number[]), ...paths[n.pathIndices[i]]]
       }
     } else if (instr.kind === Opcode.Add) {
       const n1 = stack.pop()
@@ -110,20 +120,23 @@ export function verifyMultiproof(root: Buffer, proof: Multiproof, keys: Buffer[]
       if (!n1 || !n2) {
         throw new Error('Stack underflow')
       }
-      assert(n2[0] === NodeType.Branch, 'expected branch node on stack')
+      assert(n2.kind === NodeType.Branch, 'expected branch node on stack')
       assert((instr.value as number) < 17)
-      n2[1][instr.value as number] = n1
-      n2[2] = Array.from(new Set([...n1[2], ...n2[2]]))
-      stack.push(n2)
+      n2.raw[instr.value as number] = n1
+      n2.pathIndices = Array.from(new Set([...n1.pathIndices, ...n2.pathIndices]))
 
-      const nh = popFromHashStack(hashStack, n1[0])
-      const sponge = hashStack.pop()
+      let nh = n1.hash
+      if (n1.kind === NodeType.Branch) {
+        nh = hashBranch(nh)
+      }
+      const sponge = n2.hash
       assert(Array.isArray(sponge))
       sponge[instr.value as number] = nh
-      hashStack.push(sponge)
+      n2.hash = sponge
+      stack.push(n2)
 
-      for (let i = 0; i < n1[2].length; i++) {
-        paths[n1[2][i]] = [instr.value as number, ...paths[n1[2][i]]]
+      for (let i = 0; i < n1.pathIndices.length; i++) {
+        paths[n1.pathIndices[i]] = [instr.value as number, ...paths[n1.pathIndices[i]]]
       }
     } else {
       throw new Error('Invalid opcode')
@@ -141,7 +154,7 @@ export function verifyMultiproof(root: Buffer, proof: Multiproof, keys: Buffer[]
     throw new Error('Expected root node on top of stack')
   }
 
-  let h = hashStack.pop()
+  let h = r.hash
   // Special case, if trie contains only one leaf
   // and that leaf has length < 32
   if (Array.isArray(h)) {
@@ -151,17 +164,10 @@ export function verifyMultiproof(root: Buffer, proof: Multiproof, keys: Buffer[]
   return h.equals(root)
 }
 
-function popFromHashStack(hashStack: any[], nodeType: NodeType): Buffer {
-  let nh: Buffer
-  if (nodeType === NodeType.Branch) {
-    const sponge = hashStack.pop()
-    assert(Array.isArray(sponge) && sponge.length === 17)
-    const e = encode(sponge)
-    nh = e.length >= 32 ? keccak256(e) : sponge
-  } else {
-    nh = hashStack.pop()
-  }
-  return nh
+function hashBranch(sponge: any): Buffer {
+  assert(Array.isArray(sponge) && sponge.length === 17)
+  const e = encode(sponge)
+  return e.length >= 32 ? keccak256(e) : sponge
 }
 
 export async function makeMultiproof(trie: any, keys: Buffer[]): Promise<Multiproof> {
