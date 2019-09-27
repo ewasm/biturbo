@@ -1,17 +1,7 @@
 import { ethash_keccak256 } from "./keccak";
 
-@external("debug", "debug_printMem")
-export declare function debug_mem(pos: i32, len: i32): void;
-
-@external("debug", "debug_print32")
-export declare function debug(a: i32): void;
-
 export function parseU8(buf: Uint8Array): u8 {
   return (new DataView(buf.buffer, buf.byteOffset, buf.byteLength)).getUint8(0)
-}
-
-export function debugMem(buf: Uint8Array): void {
-  debug_mem(buf.buffer as usize + buf.byteOffset, buf.length)
 }
 
 export function bufEq(buf: Uint8Array, other: Uint8Array): boolean {

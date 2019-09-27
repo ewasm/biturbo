@@ -2,12 +2,6 @@
 
 import { ethash_keccak256 } from "./keccak";
 
-@external("debug", "debug_print32")
-export declare function debug(a: i32): void;
-
-@external("debug", "debug_printMem")
-export declare function debug_mem(pos: i32, len: i32): void;
-
 
 
 export class RLPBranchNode {

@@ -1,30 +1,9 @@
 import { ethash_keccak256 } from "./keccak";
 import { hashBranchNode, RLPBranchNode, RLPData, decode, encode } from "./rlp";
-import { parseU8, debugMem, padBuf, cmpBuf, stripBuf, hash } from './util'
-
-@external("debug", "debug_print32")
-export declare function debug(a: i32): void;
-
-@external("debug", "debug_printMem")
-export declare function debug_mem(pos: i32, len: i32): void;
-
-@external("env", "eth2_blockDataSize")
-export declare function eth2_blockDataSize(): i32;
-
-@external("env", "eth2_blockDataCopy")
-export declare function eth2_blockDataCopy(outputOffset: i32, srcOffset: i32, length: i32): void;
-
-@external("env", "eth2_loadPreStateRoot")
-export declare function eth2_loadPreStateRoot(offset: i32): void;
-
-@external("env", "eth2_savePostStateRoot")
-export declare function eth2_savePostStateRoot(offset: i32): void;
-
-@external("bignum", "add256")
-export declare function add256(aOffset: i32, bOffset: i32, cOffset: i32): void;
-
-@external("bignum", "sub256")
-export declare function sub256(aOffset: i32, bOffset: i32, cOffset: i32): void;
+import { parseU8, padBuf, cmpBuf, stripBuf, hash } from './util'
+import { debug, debugMem } from './debug'
+import { eth2_blockDataSize, eth2_blockDataCopy, eth2_loadPreStateRoot, eth2_savePostStateRoot } from './env'
+import { add256, sub256 } from './bignum'
 
 
 export enum Opcode {
