@@ -37,38 +37,26 @@ class Node {
   ) {}
 }
 
-
-export function main(): i32 {
-
-  /** these globals were defined above as top level statements
-   * but AS compiled them to a start function (which Scout won't run).
-   *
-   * There is an @global decorator, but looks like its only for functions, not variables
-  */
-
-  // define two globals for using keccak: the context and the output buffer
-  // both will be reused repeatedly when calling keccak
-
-  // allocate keccak context buffer
-  let keccakCtx = new ArrayBuffer(650); // more than 616 (see the docs in keccak.tx)
-  let keccakCtxBuf = changetype<usize>(keccakCtx);
-
-
+export function main(): void {
   // INPUT 1: pre-state root
   let preStateRootBuf = new ArrayBuffer(32)
   let preStateRoot = Uint8Array.wrap(preStateRootBuf, 0, 32)
   eth2_loadPreStateRoot(preStateRootBuf as usize)
 
   // INPUT 2: proof data from the EEI
-  let input_data_len = eth2_blockDataSize();
-  let input_data_buff = new ArrayBuffer(input_data_len);
-  let input_data_buff_ptr = changetype<usize>(input_data_buff);
-  eth2_blockDataCopy(input_data_buff_ptr, 0, input_data_len);
-  let input_data = Uint8Array.wrap(input_data_buff, 0, input_data_len);
+  let blockDataSize = eth2_blockDataSize()
+  let blockDataBuf = new ArrayBuffer(blockDataSize)
+  eth2_blockDataCopy(blockDataBuf as usize, 0, blockDataSize)
+  let blockData = Uint8Array.wrap(blockDataBuf, 0, blockDataSize)
 
+  let postStateRoot = processBlock(preStateRoot, blockData)
+
+  eth2_savePostStateRoot(postStateRoot.buffer as usize + postStateRoot.byteOffset)
+}
+
+export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): Uint8Array {
   // input data is RLP
-  //debug_mem(input_data.subarray(0, 100).buffer as usize, 100)
-  let input_decoded = decode(input_data);
+  let input_decoded = decode(blockData);
   // input_decoded is type RLPData: { buffer: Uint8Array, children: RLPData[] }
   // [txes, addrs, hashes, leaves, instructions]
   let hash1 = input_decoded.children[2].children[0].buffer
@@ -184,7 +172,7 @@ export function main(): i32 {
     throw new Error('Invalid pre state root')
   }
 
-  eth2_savePostStateRoot(verifiedPreStateRoot.buffer as usize + verifiedPreStateRoot.byteOffset)
+  return verifiedPreStateRoot
 
   //let verifiedPrestateRootBuf = new ArrayBuffer(32);
   // doing memory.copy here because we don't have the reference to the original backing buffer of verified_prestate_root_ptr, only the pointer
@@ -238,9 +226,6 @@ export function main(): i32 {
   }
   eth2_savePostStateRoot(new_root_ptr);
   */
-
-
-  return 1;
 }
 
 class StackItem {
