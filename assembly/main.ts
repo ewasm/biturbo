@@ -1,5 +1,5 @@
 import { ethash_keccak256 } from "./keccak"
-import { hashBranchNode, RLPBranchNode, RLPData, decode, encode } from "./rlp"
+import { hashBranchNode, RLPBranchNode, RLPData, decode, encode, hashExtension, hashBranch } from "./rlp"
 import { parseU8, padBuf, cmpBuf, stripBuf, hash, nibbleArrToUintArr, addHexPrefix } from './util'
 import { debug, debugMem } from './debug'
 import { eth2_blockDataSize, eth2_blockDataCopy, eth2_loadPreStateRoot, eth2_savePostStateRoot } from './env'
@@ -232,7 +232,7 @@ class StackItem {
   constructor(
     public kind: NodeType,
     public hash: Uint8Array | null,
-    public sponge: RLPData | null,
+    public sponge: Array<Uint8Array | null> | null,
   ) {}
 
 }
@@ -266,20 +266,16 @@ function verifyMultiproof(hashes: RLPData[], leaves: RLPData[], instructions: Ui
         let idx = instructions[pc++]
         let n = stack[--stackTop]
 
-        let children = Array.create<RLPData>(17)
-        let branch = new RLPData(null, children)
-        for (let i = 0; i < 17; i++) {
-          children.push(new RLPData(null, Array.create<RLPData>(0)))
-        }
+        let children = new Array<Uint8Array | null>(17)
+        let nh: Uint8Array
         if (n.kind == NodeType.Branch) {
-          let e = encode(n.sponge as RLPData)
-          let h = hash(e)
-          children[idx].buffer = h
+          nh = hashBranch(n.sponge as Array<Uint8Array | null>)
         } else {
-          children[idx].buffer = n.hash as Uint8Array
+          nh = n.hash as Uint8Array
         }
+        children[idx] = nh
 
-        stack[stackTop++] = new StackItem(NodeType.Branch, null, branch)
+        stack[stackTop++] = new StackItem(NodeType.Branch, null, children)
         break
       case Opcode.Extension:
         let nibblesLen = instructions[pc++]
@@ -293,20 +289,13 @@ function verifyMultiproof(hashes: RLPData[], leaves: RLPData[], instructions: Ui
         let n = stack[--stackTop]
         let childHash: Uint8Array
         if (n.kind == NodeType.Branch) {
-          let e = encode(n.sponge as RLPData)
-          let h = hash(e)
-          childHash = h
+          childHash = hashBranch(n.sponge as Array<Uint8Array | null>)
         } else {
           childHash = n.hash as Uint8Array
         }
 
         let key = nibbleArrToUintArr(addHexPrefix(nibbles, false))
-        let raw = Array.create<RLPData>(2)
-        let node = new RLPData(null, raw)
-        raw[0] = new RLPData(key, null)
-        raw[1] = new RLPData(childHash, null)
-        let e = encode(node)
-        let h = hash(e)
+        let h = hashExtension(key, childHash)
 
         stack[stackTop++] = new StackItem(NodeType.Extension, h, null)
 
@@ -322,14 +311,12 @@ function verifyMultiproof(hashes: RLPData[], leaves: RLPData[], instructions: Ui
 
         let childHash: Uint8Array
         if (n1.kind == NodeType.Branch) {
-          let e = encode(n1.sponge as RLPData)
-          let h = hash(e)
-          childHash = h
+          childHash = hashBranch(n1.sponge as Array<Uint8Array | null>)
         } else {
           childHash = n1.hash as Uint8Array
         }
 
-        n2.sponge.children[idx].buffer = childHash
+        n2.sponge[idx] = childHash
         stack[stackTop++] = n2
         break
     }
@@ -338,8 +325,7 @@ function verifyMultiproof(hashes: RLPData[], leaves: RLPData[], instructions: Ui
   let r = stack[stackTop - 1]
   let rootHash: Uint8Array
   if (r.kind == NodeType.Branch) {
-    let e = encode(r.sponge as RLPData)
-    rootHash = hash(e)
+    rootHash = hashBranch(r.sponge as Array<Uint8Array | null>)
   } else {
     rootHash = r.hash as Uint8Array
   }
