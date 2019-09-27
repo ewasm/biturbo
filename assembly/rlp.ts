@@ -1,8 +1,6 @@
 // RLP code is taken from https://github.com/nearprotocol/assemblyscript-rlp
-
-import { ethash_keccak256 } from "./keccak";
-
-
+import { ethash_keccak256 } from './keccak'
+import { hash } from './util'
 
 export class RLPBranchNode {
   constructor(
@@ -11,9 +9,90 @@ export class RLPBranchNode {
   ) {}
 }
 
+export function hashExtension(key: Uint8Array, value: Uint8Array): Uint8Array {
+  // Key is buffer with 1 < length < 32
+  // Value is a hash with length == 32
+  // If key.length >= 21, then rlp structure changes
 
-function isNotZero(val: usize): bool {
-  return val > 0;
+  // Each buffer with length < 55 needs 1 byte of metadata (0x80 + length)
+  let keyBufLen: u8 = key.length == 1 ? 1 : key.length as u8 + 1
+  let dataLen: u8 = keyBufLen + 33
+
+  let buf: Uint8Array
+  let offset: u8 = 0
+  if (dataLen > 55) {
+    // We need 1 byte to express length of length
+    // and 1 byte to express length of list
+    buf = new Uint8Array(2 + dataLen)
+    buf[0] = 0xf8
+    buf[1] = dataLen
+    offset = 2
+  } else {
+    // We need 1 byte to express list's length
+    buf = new Uint8Array(1 + dataLen)
+    buf[0] = 0xc0 + dataLen
+    offset = 1
+  }
+
+  // Encode key
+  if (key.length == 1) {
+    buf[offset++] = key[0]
+  } else {
+    buf[offset] = 0x80 + key.length
+    memory.copy(buf.buffer as usize + buf.byteOffset + offset, key.buffer as usize + key.byteOffset, key.length)
+    offset += keyBufLen
+  }
+
+  // Encode value
+  buf[offset++] = 0xa0 // 0x80 + 0x20
+  memory.copy(buf.buffer as usize + buf.byteOffset + offset, value.buffer as usize + value.byteOffset, 32)
+
+  return hash(buf)
+}
+
+export function hashBranch(children: Array<Uint8Array | null>): Uint8Array {
+  let dataLen: u32 = 0
+  for (let i = 0; i < 17; i++) {
+    let c = children[i]
+    if (c == null) {
+      dataLen++
+    } else {
+      if (c.length == 32) {
+        // Needs 1 byte for encoding length and 32 bytes of data
+        dataLen += 33
+      } else {
+        throw new Error('Invalid branch child')
+      }
+    }
+  }
+
+  // How many bytes do we need to encode length?
+  let lenOfLen = dataLen > 255 ? 2 : 1
+  let totalLen = 1 + lenOfLen + dataLen
+  let buf = new Uint8Array(totalLen)
+  let offset = 0
+  buf[0] = 0xf7 + lenOfLen
+  if (lenOfLen == 1) {
+    buf[1] = dataLen
+    offset = 2
+  } else {
+    let dv = new DataView(buf.buffer)
+    dv.setUint16(1, dataLen as u16)
+    offset = 3
+  }
+
+  for (let i = 0; i < 17; i++) {
+    let c = children[i]
+    if (c == null) {
+      buf[offset++] = 0x80
+    } else {
+      buf[offset++] = 0xa0 // 0x80 + 0x20
+      memory.copy(buf.buffer as usize + buf.byteOffset + offset, c.buffer as usize + c.byteOffset, 32)
+      offset += 32
+    }
+  }
+
+  return hash(buf)
 }
 
 export function hashBranchNode(branchNodeChildren: Array<usize>): usize {
@@ -150,7 +229,6 @@ export function hashBranchNode(branchNodeChildren: Array<usize>): usize {
 
   return branchHashOutputPtr;
 }
-
 
 
 /**
