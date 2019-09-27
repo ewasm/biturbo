@@ -1,6 +1,6 @@
-import { ethash_keccak256 } from "./keccak";
-import { hashBranchNode, RLPBranchNode, RLPData, decode, encode } from "./rlp";
-import { parseU8, padBuf, cmpBuf, stripBuf, hash } from './util'
+import { ethash_keccak256 } from "./keccak"
+import { hashBranchNode, RLPBranchNode, RLPData, decode, encode } from "./rlp"
+import { parseU8, padBuf, cmpBuf, stripBuf, hash, nibbleArrToUintArr, addHexPrefix } from './util'
 import { debug, debugMem } from './debug'
 import { eth2_blockDataSize, eth2_blockDataCopy, eth2_loadPreStateRoot, eth2_savePostStateRoot } from './env'
 import { add256, sub256 } from './bignum'
@@ -520,9 +520,6 @@ function verifyMultiproofOld(input_decoded: RLPData): usize {
 
 }
 
-
-
-
 function insertNewLeafNewBranch(prestate_root_hash_ptr: usize, new_leaf_key_nibbles: Array<u8>, new_leaf_account_rlp: Uint8Array): void {
 
   let currentNode = Trie.get(prestate_root_hash_ptr);
@@ -601,8 +598,6 @@ function insertNewLeafNewBranch(prestate_root_hash_ptr: usize, new_leaf_key_nibb
   } // end for loop
 
 }
-
-
 
 function createNewBranchWhereLeafExists(new_leaf_account_rlp: Uint8Array, new_key_nibbles: Array<u8>, k_i: u32, existingLeafNode: Node, pathStack: Array<usize>): void {
   //debug_mem((new_leaf_account_rlp.buffer as usize) + new_leaf_account_rlp.byteOffset, new_leaf_account_rlp.byteLength);
@@ -700,8 +695,6 @@ function createNewBranchWhereLeafExists(new_leaf_account_rlp: Uint8Array, new_ke
   return;
 }
 
-
-
 function rehashNode(staleHashPtr: usize): usize {
   // accepts a hash pointer, returns a pointer to the new hash
 
@@ -744,82 +737,3 @@ function rehashNode(staleHashPtr: usize): usize {
   // TODO: handle extension nodes
   throw new Error('only branch nodes and leaf nodes are implemented');
 }
-
-
-
-function removeHexPrefix(nib_arr: Array<u8>): Array<u8> {
-  // the hex prefix is merkle-patricia-trie encoding, not RLP
-  if (nib_arr[0] % 2) {
-    return nib_arr.slice(1);
-  } else {
-    return nib_arr.slice(2);
-  }
-}
-
-
-function addHexPrefix(key_nib_arr: Array<u8>, terminator: bool): Array<u8> {
-  if (key_nib_arr.length % 2) {
-    // odd
-    key_nib_arr.unshift(1);
-  } else {
-    // even
-    key_nib_arr.unshift(0);
-    key_nib_arr.unshift(0);
-  }
-
-  if (terminator) {
-    key_nib_arr[0] = key_nib_arr[0] + 2;
-  }
-
-  return key_nib_arr;
-}
-
-
-
-function u8ArrToNibbleArr(u8_arr: Array<u8>): Array<u8> {
-  var len = u8_arr.length;
-
-  var nib_arr = Array.create<u8>(len * 2); // length is num of hex chars for address_hash
-  // TODO: we might not need to convert the whole thing to nibbles, just enough chars to follow the path to the proof
-
-  let q = 0;
-  for (let i = 0; i < len; i++) {
-    q = i * 2;
-    nib_arr[q] = u8_arr[i] >> 4;
-    q = q + 1;
-    nib_arr[q] = u8_arr[i] % 16;
-  }
-
-  return nib_arr;
-}
-
-
-function uintArrToNibbleArr(uint_arr: Uint8Array): Array<u8> {
-  var len = uint_arr.length;
-
-  var nib_arr = Array.create<u8>(len * 2); // length is num of hex chars for address_hash
-  // TODO: we might not need to convert the whole thing to nibbles, just enough chars to follow the path to the proof
-
-  let q = 0;
-  for (let i = 0; i < len; i++) {
-    q = i * 2;
-    nib_arr[q] = uint_arr[i] >> 4;
-    q = q + 1;
-    nib_arr[q] = uint_arr[i] % 16;
-  }
-
-  return nib_arr;
-}
-
-
-function nibbleArrToUintArr(arr: Array<u8>): Uint8Array {
-  let buf = new Uint8Array(arr.length / 2);
-
-  for (let i = 0; i < buf.length; i++) {
-    let q = i * 2;
-    buf[i] = (arr[q] << 4) + arr[++q];
-  }
-
-  return buf;
-}
-
