@@ -12,8 +12,14 @@ import {
 } from "./rlp"
 import { parseU8, padBuf, cmpBuf, stripBuf, hash, nibbleArrToUintArr, addHexPrefix, uintArrToNibbleArr, removeHexPrefix } from './util'
 import { debug, debugMem } from './debug'
-import { eth2_blockDataSize, eth2_blockDataCopy, eth2_loadPreStateRoot, eth2_savePostStateRoot } from './env'
-import { add256, sub256 } from './bignum'
+import {
+  eth2_blockDataSize,
+  eth2_blockDataCopy,
+  eth2_loadPreStateRoot,
+  eth2_savePostStateRoot,
+  bignum_add256,
+  bignum_sub256
+} from '../node_modules/scout.ts/assembly/env'
 
 
 export enum Opcode {
@@ -121,11 +127,11 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
     value = padBuf(value, 32)
     let fromBalance = padBuf(fromAccount[1].buffer, 32)
     let newFromBalance = new ArrayBuffer(32)
-    sub256(fromBalance.buffer as usize, value.buffer as usize, newFromBalance as usize)
+    bignum_sub256(fromBalance.buffer as usize, value.buffer as usize, newFromBalance as usize)
 
     let toBalance = padBuf(toAccount[1].buffer, 32)
     let newToBalance = new ArrayBuffer(32)
-    add256(toBalance.buffer as usize, value.buffer as usize, newToBalance as usize)
+    bignum_add256(toBalance.buffer as usize, value.buffer as usize, newToBalance as usize)
 
     let paddedNonce = padBuf(nonce, 32)
     let fromNonce = padBuf(fromAccount[0].buffer, 32)
@@ -133,7 +139,7 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
     let one256 = new ArrayBuffer(32)
     let onedv = new DataView(one256)
     onedv.setUint8(31, 1)
-    add256(fromNonce.buffer as usize, one256 as usize, newFromNonce as usize)
+    bignum_add256(fromNonce.buffer as usize, one256 as usize, newFromNonce as usize)
 
     // Encode updated accounts
     let newFromAccount = encodeAccount(stripBuf(Uint8Array.wrap(newFromNonce)), stripBuf(Uint8Array.wrap(newFromBalance)))

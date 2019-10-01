@@ -1,5 +1,4 @@
-export declare function debug_print32(v: i32): void;
-export declare function debug_printMem(pos: i32, len: i32): void;
+import { debug_print32, debug_printMem } from '../node_modules/scout.ts/assembly/env'
 
 export function debugMem(buf: Uint8Array): void {
   debug_printMem(buf.buffer as usize + buf.byteOffset, buf.length)

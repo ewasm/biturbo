@@ -29,7 +29,7 @@
     "assemblyscript": "github:AssemblyScript/assemblyscript#22c4cf42f05bd8610e5f8924d27a5b8636405a6d",
     "gulp": "^4.0.2",
     "prettier": "^1.18.2",
-    "scout.ts": "0.0.1",
+    "scout.ts": "0.0.2",
     "tape": "^4.11.0",
     "ts-node": "^8.4.1",
     "tslint": "^5.20.0",
