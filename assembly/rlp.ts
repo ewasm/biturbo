@@ -9,6 +9,59 @@ export class RLPBranchNode {
   ) {}
 }
 
+const defaultStateRoot: u8[] = [
+  86, 232, 31, 23, 27, 204, 85, 166, 255, 131, 69, 230, 146, 192, 248, 110, 91, 72, 224, 27, 153, 108, 173, 192, 1, 98, 47, 181, 227, 99, 180, 33
+]
+const defaultCodeHash: u8[] = [
+  197, 210, 70, 1, 134, 247, 35, 60, 146, 126, 125, 178, 220, 199, 3, 192, 229, 0, 182, 83, 202, 130, 39, 59, 123, 250, 216, 4, 93, 133, 164, 112
+]
+
+export function encodeAccount(nonce: Uint8Array, balance: Uint8Array): Uint8Array {
+  // Nonce and balance are buffers with 0 <= length <= 32
+  // We assume stateRoot and codeHash to be constant hashes
+  let nonceLen = nonce.length <= 1 ? 1 : nonce.length + 1
+  let balanceLen = balance.length <= 1 ? 1 : balance.length + 1
+  let dataLen = nonceLen + balanceLen + 33 + 33
+
+  let buf = new Uint8Array(2 + dataLen)
+  buf[0] = 0xf8
+  buf[1] = dataLen
+  let offset = 2
+
+  if (nonce.length == 0) {
+    buf[offset++] = 0x80
+  } else if (nonce.length == 1) {
+    buf[offset++] = nonce[0]
+  } else {
+    buf[offset++] = 0x80 + nonce.length as u8
+    memory.copy(buf.buffer as usize + buf.byteOffset + offset, nonce.buffer as usize + nonce.byteOffset, nonce.length)
+    offset += nonce.length
+  }
+
+  if (balance.length == 0) {
+    buf[offset++] = 0x80
+  } else if (balance.length == 1) {
+    buf[offset++] = balance[0]
+  } else {
+    buf[offset++] = 0x80 + balance.length as u8
+    memory.copy(buf.buffer as usize + buf.byteOffset + offset, balance.buffer as usize + balance.byteOffset, balance.length)
+    offset += balance.length
+  }
+
+  // The first value in an array reference is a pointer
+  // to the backing buffer. See the memory layout of arrays for more info.
+  let defaultStateRootPtr: usize = load<usize>(defaultStateRoot as usize)
+  buf[offset++] = 0xa0 // 0x80 + 0x20
+  memory.copy(buf.buffer as usize + buf.byteOffset + offset, defaultStateRootPtr, 32)
+  offset += 32
+
+  let defaultCodeHashPtr: usize = load<usize>(defaultCodeHash as usize)
+  buf[offset++] = 0xa0
+  memory.copy(buf.buffer as usize + buf.byteOffset + offset, defaultCodeHashPtr, 32)
+
+  return buf
+}
+
 export function encodeLeaf(key: Uint8Array, value: Uint8Array): Uint8Array {
   // Key is buffer with 1 < length < 32
   // Value is a buffer with 64 <= length <= 128

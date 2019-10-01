@@ -1,5 +1,15 @@
 import { ethash_keccak256 } from "./keccak"
-import { hashBranchNode, RLPBranchNode, RLPData, decode, encode, hashExtension, hashBranch, encodeLeaf } from "./rlp"
+import {
+  hashBranchNode,
+  RLPBranchNode,
+  RLPData,
+  decode,
+  encode,
+  hashExtension,
+  hashBranch,
+  encodeLeaf,
+  encodeAccount
+} from "./rlp"
 import { parseU8, padBuf, cmpBuf, stripBuf, hash, nibbleArrToUintArr, addHexPrefix } from './util'
 import { debug, debugMem } from './debug'
 import { eth2_blockDataSize, eth2_blockDataCopy, eth2_loadPreStateRoot, eth2_savePostStateRoot } from './env'
@@ -126,21 +136,8 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
     add256(toBalance.buffer as usize, value.buffer as usize, newToBalance as usize)
 
     // Encode updated accounts
-    let fromAccountRLPDataChildren = Array.create<RLPData>(4)
-    let fromAccountRLPData = new RLPData(null, fromAccountRLPDataChildren)
-    fromAccountRLPDataChildren.push(new RLPData(stripBuf(Uint8Array.wrap(newFromNonce)), null))
-    fromAccountRLPDataChildren.push(new RLPData(stripBuf(Uint8Array.wrap(newFromBalance)), null))
-    fromAccountRLPDataChildren.push(fromAccount[2])
-    fromAccountRLPDataChildren.push(fromAccount[3])
-    let newFromAccount = encode(fromAccountRLPData)
-
-    let toAccountRLPDataChildren = Array.create<RLPData>(4)
-    let toAccountRLPData = new RLPData(null, toAccountRLPDataChildren)
-    toAccountRLPDataChildren.push(toAccount[0])
-    toAccountRLPDataChildren.push(new RLPData(stripBuf(Uint8Array.wrap(newToBalance)), null))
-    toAccountRLPDataChildren.push(toAccount[2])
-    toAccountRLPDataChildren.push(toAccount[3])
-    let newToAccount = encode(toAccountRLPData)
+    let newFromAccount = encodeAccount(stripBuf(Uint8Array.wrap(newFromNonce)), stripBuf(Uint8Array.wrap(newFromBalance)))
+    let newToAccount = encodeAccount(toAccount[0].buffer, stripBuf(Uint8Array.wrap(newToBalance)))
 
     updatedAccounts[fromIdx] = newFromAccount
     updatedAccounts[toIdx] = newToAccount
