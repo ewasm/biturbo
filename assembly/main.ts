@@ -10,7 +10,7 @@ import {
   encodeLeaf,
   encodeAccount
 } from "./rlp"
-import { parseU8, padBuf, cmpBuf, stripBuf, hash, nibbleArrToUintArr, addHexPrefix } from './util'
+import { parseU8, padBuf, cmpBuf, stripBuf, hash, nibbleArrToUintArr, addHexPrefix, uintArrToNibbleArr, removeHexPrefix } from './util'
 import { debug, debugMem } from './debug'
 import { eth2_blockDataSize, eth2_blockDataCopy, eth2_loadPreStateRoot, eth2_savePostStateRoot } from './env'
 import { add256, sub256 } from './bignum'
@@ -192,6 +192,7 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
 class StackItem {
   constructor(
     public kind: NodeType,
+    public pathIndices: Array<usize>,
     public hash: Uint8Array | null,
     public sponge: Array<Uint8Array | null> | null,
     public newHash: Uint8Array | null,
@@ -215,6 +216,11 @@ function verifyMultiproofAndUpdate(
   let stack = Array.create<StackItem>(100)
   let stackTop = 0
 
+  let paths = Array.create<Array<u8>>(leafKeys.length)
+  for (let i = 0; i < leafKeys.length; i++) {
+    paths[i] = new Array<u8>()
+  }
+
   while (pc < instructions.length) {
     let op = instructions[pc++]
     switch (op) {
@@ -223,18 +229,20 @@ function verifyMultiproofAndUpdate(
           throw new Error('Not enough hashes in multiproof')
         }
         let h = hashes[hashIdx++].buffer
-        stack[stackTop++] = new StackItem(NodeType.Hash, h, null, h, null)
+        stack[stackTop++] = new StackItem(NodeType.Hash, [], h, null, h, null)
         break
       case Opcode.Leaf:
         if (leafIdx >= leafKeys.length) {
           throw new Error('Not enough leaves in multiproof')
         }
+        let path = removeHexPrefix(uintArrToNibbleArr(leafKeys[leafIdx].buffer))
+        paths[leafIdx] = path
         let l = encodeLeaf(leafKeys[leafIdx].buffer, accounts[leafIdx].buffer)
         let ul = encodeLeaf(leafKeys[leafIdx].buffer, updatedAccounts[leafIdx])
         leafIdx++
         let h = hash(l)
         let nh = hash(ul)
-        stack[stackTop++] = new StackItem(NodeType.Leaf, h, null, nh, null)
+        stack[stackTop++] = new StackItem(NodeType.Leaf, [leafIdx - 1], h, null, nh, null)
         break
       case Opcode.Branch:
         let idx = instructions[pc++]
@@ -254,7 +262,10 @@ function verifyMultiproofAndUpdate(
         children[idx] = ch
         newChildren[idx] = nch
 
-        stack[stackTop++] = new StackItem(NodeType.Branch, null, children, null, newChildren)
+        stack[stackTop++] = new StackItem(NodeType.Branch, n.pathIndices.slice(0), null, children, null, newChildren)
+        for (let i = 0; i < n.pathIndices.length; i++) {
+          paths[n.pathIndices[i]].unshift(idx)
+        }
         break
       case Opcode.Extension:
         let nibblesLen = instructions[pc++]
@@ -279,7 +290,10 @@ function verifyMultiproofAndUpdate(
         let h = hashExtension(key, childHash)
         let nh = hashExtension(key, newChildHash)
 
-        stack[stackTop++] = new StackItem(NodeType.Extension, h, null, nh, null)
+        stack[stackTop++] = new StackItem(NodeType.Extension, n.pathIndices.slice(0), h, null, nh, null)
+        for (let i = 0; i < n.pathIndices.length; i++) {
+          paths[n.pathIndices[i]] = nibbles.concat(paths[n.pathIndices[i]])
+        }
         break
       case Opcode.Add:
         let n1 = stack[--stackTop]
@@ -300,9 +314,19 @@ function verifyMultiproofAndUpdate(
           newChildHash = n1.newHash as Uint8Array
         }
 
+        for (let i = 0; i < n1.pathIndices.length; i++) {
+          let pathIdx = n1.pathIndices[i]
+          if (!n2.pathIndices.includes(pathIdx)) {
+            n2.pathIndices.push(pathIdx)
+          }
+        }
         n2.sponge[idx] = childHash
         n2.newSponge[idx] = newChildHash
         stack[stackTop++] = n2
+
+        for (let i = 0; i < n1.pathIndices.length; i++) {
+          paths[n1.pathIndices[i]].unshift(idx)
+        }
         break
     }
   }
@@ -320,6 +344,14 @@ function verifyMultiproofAndUpdate(
 
   if (cmpBuf(rootHash, preStateRoot) != 0) {
     throw new Error('invalid root hash')
+  }
+
+  // Verify given keys match computed paths
+  for (let i = 0; i < paths.length; i++) {
+    let path = nibbleArrToUintArr(paths[i])
+    if (cmpBuf(path, keys[i]) != 0) {
+      throw new Error('invalid key')
+    }
   }
 
   return newRootHash
