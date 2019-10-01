@@ -119,21 +119,22 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
     }
 
     // Update nonce and balances
-    let fromBalance = padBuf(fromAccount[1].buffer, 32)
-    let toBalance = padBuf(toAccount[1].buffer, 32)
     value = padBuf(value, 32)
-    let paddedNonce = padBuf(nonce, 32)
+    let fromBalance = padBuf(fromAccount[1].buffer, 32)
     let newFromBalance = new ArrayBuffer(32)
     sub256(fromBalance.buffer as usize, value.buffer as usize, newFromBalance as usize)
+
+    let toBalance = padBuf(toAccount[1].buffer, 32)
+    let newToBalance = new ArrayBuffer(32)
+    add256(toBalance.buffer as usize, value.buffer as usize, newToBalance as usize)
+
+    let paddedNonce = padBuf(nonce, 32)
     let fromNonce = padBuf(fromAccount[0].buffer, 32)
     let newFromNonce = new ArrayBuffer(32)
     let one256 = new ArrayBuffer(32)
     let onedv = new DataView(one256)
     onedv.setUint8(31, 1)
     add256(fromNonce.buffer as usize, one256 as usize, newFromNonce as usize)
-
-    let newToBalance = new ArrayBuffer(32)
-    add256(toBalance.buffer as usize, value.buffer as usize, newToBalance as usize)
 
     // Encode updated accounts
     let newFromAccount = encodeAccount(stripBuf(Uint8Array.wrap(newFromNonce)), stripBuf(Uint8Array.wrap(newFromBalance)))
@@ -148,30 +149,9 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
     keys.push(hash(addrs[i].buffer))
   }
 
-  let verifiedPreStateRoot = verifyMultiproof(hashes, leafKeys, accounts, instructions, keys)
+  let postStateRoot = verifyMultiproofAndUpdate(preStateRoot, hashes, leafKeys, accounts, updatedAccounts as Uint8Array[], instructions, keys)
 
-  if (cmpBuf(verifiedPreStateRoot, preStateRoot) != 0) {
-    throw new Error('Invalid pre state root')
-  }
-
-  return verifiedPreStateRoot
-
-  //let verifiedPrestateRootBuf = new ArrayBuffer(32);
-  // doing memory.copy here because we don't have the reference to the original backing buffer of verified_prestate_root_ptr, only the pointer
-  // TODO: try dereferencing the pointer instead of recreating an arraybuffer
-  //memory.copy((verifiedPrestateRootBuf as usize), verified_prestate_root_ptr, 32);
-  //let verified_prestate_root = Uint64Array.wrap(verifiedPrestateRootBuf, 0, 4);
-
-  // TODO: make helper for hash comparison, and use @inline
-  /*if ((verified_prestate_root[0] != prestate_root_hash_data[0])
-      || (verified_prestate_root[1] != prestate_root_hash_data[1])
-      || (verified_prestate_root[2] != prestate_root_hash_data[2])
-      || (verified_prestate_root[3] != prestate_root_hash_data[3])) {
-    throw new Error('hashes dont match!');
-  }*/
-
-  //eth2_savePostStateRoot(verified_prestate_root_ptr);
-
+  return postStateRoot
 
 
   /*
@@ -215,11 +195,21 @@ class StackItem {
     public kind: NodeType,
     public hash: Uint8Array | null,
     public sponge: Array<Uint8Array | null> | null,
+    public newHash: Uint8Array | null,
+    public newSponge: Array<Uint8Array | null> | null,
   ) {}
 
 }
 
-function verifyMultiproof(hashes: RLPData[], leafKeys: RLPData[], accounts: RLPData[], instructions: Uint8Array, keys: Uint8Array[]): Uint8Array {
+function verifyMultiproofAndUpdate(
+  preStateRoot: Uint8Array,
+  hashes: RLPData[],
+  leafKeys: RLPData[],
+  accounts: RLPData[],
+  updatedAccounts: Uint8Array[],
+  instructions: Uint8Array,
+  keys: Uint8Array[]
+): Uint8Array {
   let pc = 0
   let hashIdx = 0
   let leafIdx = 0
@@ -234,36 +224,42 @@ function verifyMultiproof(hashes: RLPData[], leafKeys: RLPData[], accounts: RLPD
           throw new Error('Not enough hashes in multiproof')
         }
         let h = hashes[hashIdx++].buffer
-        stack[stackTop++] = new StackItem(NodeType.Hash, h, null)
+        stack[stackTop++] = new StackItem(NodeType.Hash, h, null, h, null)
         break
       case Opcode.Leaf:
         if (leafIdx >= leafKeys.length) {
           throw new Error('Not enough leaves in multiproof')
         }
-        let e = encodeLeaf(leafKeys[leafIdx].buffer, accounts[leafIdx].buffer)
+        let l = encodeLeaf(leafKeys[leafIdx].buffer, accounts[leafIdx].buffer)
+        let ul = encodeLeaf(leafKeys[leafIdx].buffer, updatedAccounts[leafIdx])
         leafIdx++
-        let h = hash(e)
-        stack[stackTop++] = new StackItem(NodeType.Leaf, h, null)
+        let h = hash(l)
+        let nh = hash(ul)
+        stack[stackTop++] = new StackItem(NodeType.Leaf, h, null, nh, null)
         break
       case Opcode.Branch:
         let idx = instructions[pc++]
         let n = stack[--stackTop]
 
         let children = new Array<Uint8Array | null>(17)
-        let nh: Uint8Array
+        let newChildren = new Array<Uint8Array | null>(17)
+        let ch: Uint8Array
+        let nch: Uint8Array
         if (n.kind == NodeType.Branch) {
-          nh = hashBranch(n.sponge as Array<Uint8Array | null>)
+          ch = hashBranch(n.sponge as Array<Uint8Array | null>)
+          nch = hashBranch(n.newSponge as Array<Uint8Array | null>)
         } else {
-          nh = n.hash as Uint8Array
+          ch = n.hash as Uint8Array
+          nch = n.newHash as Uint8Array
         }
-        children[idx] = nh
+        children[idx] = ch
+        newChildren[idx] = nch
 
-        stack[stackTop++] = new StackItem(NodeType.Branch, null, children)
+        stack[stackTop++] = new StackItem(NodeType.Branch, null, children, null, newChildren)
         break
       case Opcode.Extension:
         let nibblesLen = instructions[pc++]
         let nibbles = Array.create<u8>(nibblesLen)
-        //memory.copy(nibbles.buffer as usize + nibbles.byteOffset, instructions.buffer as usize + instructions.byteOffset + pc, nibblesLen)
         for (let i = 0; i < (nibblesLen as i32); i++) {
           nibbles[i] = instructions[pc + i]
         }
@@ -271,17 +267,20 @@ function verifyMultiproof(hashes: RLPData[], leafKeys: RLPData[], accounts: RLPD
 
         let n = stack[--stackTop]
         let childHash: Uint8Array
+        let newChildHash: Uint8Array
         if (n.kind == NodeType.Branch) {
           childHash = hashBranch(n.sponge as Array<Uint8Array | null>)
+          newChildHash = hashBranch(n.newSponge as Array<Uint8Array | null>)
         } else {
           childHash = n.hash as Uint8Array
+          newChildHash = n.newHash as Uint8Array
         }
 
         let key = nibbleArrToUintArr(addHexPrefix(nibbles, false))
         let h = hashExtension(key, childHash)
+        let nh = hashExtension(key, newChildHash)
 
-        stack[stackTop++] = new StackItem(NodeType.Extension, h, null)
-
+        stack[stackTop++] = new StackItem(NodeType.Extension, h, null, nh, null)
         break
       case Opcode.Add:
         let n1 = stack[--stackTop]
@@ -293,13 +292,17 @@ function verifyMultiproof(hashes: RLPData[], leafKeys: RLPData[], accounts: RLPD
         }
 
         let childHash: Uint8Array
+        let newChildHash: Uint8Array
         if (n1.kind == NodeType.Branch) {
           childHash = hashBranch(n1.sponge as Array<Uint8Array | null>)
+          newChildHash = hashBranch(n1.newSponge as Array<Uint8Array | null>)
         } else {
           childHash = n1.hash as Uint8Array
+          newChildHash = n1.newHash as Uint8Array
         }
 
         n2.sponge[idx] = childHash
+        n2.newSponge[idx] = newChildHash
         stack[stackTop++] = n2
         break
     }
@@ -307,13 +310,20 @@ function verifyMultiproof(hashes: RLPData[], leafKeys: RLPData[], accounts: RLPD
 
   let r = stack[stackTop - 1]
   let rootHash: Uint8Array
+  let newRootHash: Uint8Array
   if (r.kind == NodeType.Branch) {
     rootHash = hashBranch(r.sponge as Array<Uint8Array | null>)
+    newRootHash = hashBranch(r.newSponge as Array<Uint8Array | null>)
   } else {
     rootHash = r.hash as Uint8Array
+    newRootHash = r.newHash as Uint8Array
   }
 
-  return rootHash
+  if (cmpBuf(rootHash, preStateRoot) != 0) {
+    throw new Error('invalid root hash')
+  }
+
+  return newRootHash
 }
 
 function verifyMultiproofOld(input_decoded: RLPData): usize {
