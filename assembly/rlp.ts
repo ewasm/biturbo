@@ -10,11 +10,34 @@ export class RLPBranchNode {
 }
 
 export function encodeLeaf(key: Uint8Array, value: Uint8Array): Uint8Array {
-  let leafRLP = Array.create<RLPData>(2)
-  leafRLP.push(new RLPData(key, null))
-  leafRLP.push(new RLPData(value, null))
-  let sponge = new RLPData(null, leafRLP)
-  return encode(sponge)
+  // Key is buffer with 1 < length < 32
+  // Value is a buffer with 64 <= length <= 128
+  let keyBufLen: u8 = key.length == 1 ? 1 : key.length as u8 + 1
+  let valueBufLen: u8 = value.length as u8 + 2
+  let dataLen: u8 = keyBufLen + valueBufLen
+
+  // We need 1 byte to express length of length
+  // and 1 byte to express length of list
+  let buf = new Uint8Array(2 + dataLen)
+  buf[0] = 0xf8
+  buf[1] = dataLen
+  let offset = 2
+
+  // Encode key
+  if (key.length == 1) {
+    buf[offset++] = key[0]
+  } else {
+    buf[offset++] = 0x80 + key.length
+    memory.copy(buf.buffer as usize + buf.byteOffset + offset, key.buffer as usize + key.byteOffset, key.length)
+    offset += key.length
+  }
+
+  // Encode value
+  buf[offset++] = 0xb8
+  buf[offset++] = value.length as u8
+  memory.copy(buf.buffer as usize + buf.byteOffset + offset, value.buffer as usize + value.byteOffset, value.length)
+
+  return buf
 }
 
 export function hashExtension(key: Uint8Array, value: Uint8Array): Uint8Array {
