@@ -330,7 +330,7 @@ function concatUint8Arrays(arrays: Array<Uint8Array>): Uint8Array {
     let counter = 0;
     for (let i = 0; i < arrays.length; i++) {
         // TODO: check that arrays[1].byteOffset is right and covered by tests
-        memory.copy((res.buffer as usize) + res.byteOffset + counter, (arrays[i].buffer as usize) + arrays[1].byteOffset, arrays[i].byteLength);
+        memory.copy((res.buffer as usize) + res.byteOffset + counter, (arrays[i].buffer as usize) + arrays[i].byteOffset, arrays[i].byteLength);
         counter += arrays[i].byteLength;
     }
     return res;
@@ -345,12 +345,15 @@ function concatUint8Arrays(arrays: Array<Uint8Array>): Uint8Array {
 export function encode(input: RLPData): Uint8Array {
     if (input.children.length) {
         let output = new Array<Uint8Array>();
+        output.push(new Uint8Array(0));
+        let totalLen = 0
         for (let i = 0; i < input.children.length; i++) {
-            //debug(i);
-            output.push(encode(input.children[i]));
+            let e = encode(input.children[i]);
+            output.push(e);
+            totalLen += output[i + 1].byteLength
         }
-        let buf = concatUint8Arrays(output);
-        return concatUint8Array(encodeLength(buf.length, 192), buf);
+        output[0] = encodeLength(totalLen, 192)
+        return concatUint8Arrays(output)
     } else {
         //debug_mem((input.buffer.buffer as usize) + input.buffer.byteOffset, input.buffer.byteLength);
         if (input.buffer.length == 1 && input.buffer[0] < 128) {
