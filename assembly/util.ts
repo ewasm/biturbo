@@ -1,6 +1,7 @@
 import { ethash_keccak256 } from "./keccak";
 
 export function parseU8(buf: Uint8Array): u8 {
+  if (buf.length == 0) return 0
   return (new DataView(buf.buffer, buf.byteOffset, buf.byteLength)).getUint8(0)
 }
 

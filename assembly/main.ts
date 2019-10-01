@@ -1,5 +1,5 @@
 import { ethash_keccak256 } from "./keccak"
-import { hashBranchNode, RLPBranchNode, RLPData, decode, encode, hashExtension, hashBranch } from "./rlp"
+import { hashBranchNode, RLPBranchNode, RLPData, decode, encode, hashExtension, hashBranch, encodeLeaf } from "./rlp"
 import { parseU8, padBuf, cmpBuf, stripBuf, hash, nibbleArrToUintArr, addHexPrefix } from './util'
 import { debug, debugMem } from './debug'
 import { eth2_blockDataSize, eth2_blockDataCopy, eth2_loadPreStateRoot, eth2_savePostStateRoot } from './env'
@@ -64,13 +64,17 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
   let txes = input_decoded.children[0].children
   let addrs = input_decoded.children[1].children
   let hashes = input_decoded.children[2].children
-  let leaves = input_decoded.children[3].children
+  let leafKeys = input_decoded.children[3].children
+  let accounts = input_decoded.children[4].children
   // Instructions are flat-encoded
-  let instructions = input_decoded.children[4].buffer
+  let instructions = input_decoded.children[5].buffer
 
-  let updatedLeaves = new Array<Uint8Array | null>(leaves.length)
+  if (addrs.length !== leafKeys.length || addrs.length !== accounts.length) {
+    throw new Error('invalid multiproof')
+  }
+  let updatedAccounts = new Array<Uint8Array | null>(accounts.length)
 
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < txes.length; i++) {
     let tx = txes[i]
     // [toIdx, value, nonce, fromIdx]
     let toIdx = parseU8(tx.children[0].buffer)
@@ -80,26 +84,20 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
 
     // TODO: Hash unsigned tx, recover from address, check against fromIdx
 
-    let fromLeaf = leaves[fromIdx].buffer
+    let fromAccountRaw = accounts[fromIdx].buffer
     // If `from` has been modified by previous txes
     // load the updated one.
-    if (updatedLeaves[fromIdx] != null) {
-      fromLeaf = updatedLeaves[fromIdx] as Uint8Array
+    if (updatedAccounts[fromIdx] != null) {
+      fromAccountRaw = updatedAccounts[fromIdx] as Uint8Array
     }
 
-    let toLeaf = leaves[toIdx].buffer
-    if (updatedLeaves[toIdx] != null) {
-      toLeaf = updatedLeaves[toIdx] as Uint8Array
+    let toAccountRaw = accounts[toIdx].buffer
+    if (updatedAccounts[toIdx] != null) {
+      toAccountRaw = updatedAccounts[toIdx] as Uint8Array
     }
 
-    let decodedFrom = decode(fromLeaf)
-    let decodedTo = decode(toLeaf)
-
-    let fromKey = decodedFrom.children[0]
-    let toKey = decodedTo.children[0]
-
-    let fromAccount = decode(decodedFrom.children[1].buffer).children
-    let toAccount = decode(decodedTo.children[1].buffer).children
+    let fromAccount = decode(fromAccountRaw).children
+    let toAccount = decode(toAccountRaw).children
     // Sender's nonce should match tx's nonce
     if (cmpBuf(fromAccount[0].buffer, nonce) != 0) {
       throw new Error('Invalid nonce')
@@ -111,7 +109,6 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
     }
 
     // Update nonce and balances
-    // TODO: too many memalloc and copy
     let fromBalance = padBuf(fromAccount[1].buffer, 32)
     let toBalance = padBuf(toAccount[1].buffer, 32)
     value = padBuf(value, 32)
@@ -129,36 +126,24 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
     add256(toBalance.buffer as usize, value.buffer as usize, newToBalance as usize)
 
     // Encode updated accounts
-    let fromLeafRLPDataChildren = Array.create<RLPData>(2)
-    let fromLeafRLPData = new RLPData(null, fromLeafRLPDataChildren)
-    fromLeafRLPDataChildren.push(fromKey)
     let fromAccountRLPDataChildren = Array.create<RLPData>(4)
     let fromAccountRLPData = new RLPData(null, fromAccountRLPDataChildren)
     fromAccountRLPDataChildren.push(new RLPData(stripBuf(Uint8Array.wrap(newFromNonce)), null))
     fromAccountRLPDataChildren.push(new RLPData(stripBuf(Uint8Array.wrap(newFromBalance)), null))
     fromAccountRLPDataChildren.push(fromAccount[2])
     fromAccountRLPDataChildren.push(fromAccount[3])
-    let fromAccountRLP = encode(fromAccountRLPData)
-    // TODO: avoid extra encoding
-    fromLeafRLPDataChildren.push(new RLPData(fromAccountRLP, null))
+    let newFromAccount = encode(fromAccountRLPData)
 
-    let toLeafRLPDataChildren = Array.create<RLPData>(2)
-    let toLeafRLPData = new RLPData(null, toLeafRLPDataChildren)
-    toLeafRLPDataChildren.push(toKey)
     let toAccountRLPDataChildren = Array.create<RLPData>(4)
     let toAccountRLPData = new RLPData(null, toAccountRLPDataChildren)
     toAccountRLPDataChildren.push(toAccount[0])
     toAccountRLPDataChildren.push(new RLPData(stripBuf(Uint8Array.wrap(newToBalance)), null))
     toAccountRLPDataChildren.push(toAccount[2])
     toAccountRLPDataChildren.push(toAccount[3])
-    let toAccountRLP = encode(toAccountRLPData)
-    toLeafRLPDataChildren.push(new RLPData(toAccountRLP, null))
+    let newToAccount = encode(toAccountRLPData)
 
-    let newFromLeaf = encode(fromLeafRLPData)
-    let newToLeaf = encode(toLeafRLPData)
-
-    updatedLeaves[fromIdx] = newFromLeaf
-    updatedLeaves[toIdx] = newToLeaf
+    updatedAccounts[fromIdx] = newFromAccount
+    updatedAccounts[toIdx] = newToAccount
   }
 
   let keys = Array.create<Uint8Array>(addrs.length)
@@ -166,7 +151,7 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
     keys.push(hash(addrs[i].buffer))
   }
 
-  let verifiedPreStateRoot = verifyMultiproof(hashes, leaves, instructions, keys)
+  let verifiedPreStateRoot = verifyMultiproof(hashes, leafKeys, accounts, instructions, keys)
 
   if (cmpBuf(verifiedPreStateRoot, preStateRoot) != 0) {
     throw new Error('Invalid pre state root')
@@ -237,7 +222,7 @@ class StackItem {
 
 }
 
-function verifyMultiproof(hashes: RLPData[], leaves: RLPData[], instructions: Uint8Array, keys: Uint8Array[]): Uint8Array {
+function verifyMultiproof(hashes: RLPData[], leafKeys: RLPData[], accounts: RLPData[], instructions: Uint8Array, keys: Uint8Array[]): Uint8Array {
   let pc = 0
   let hashIdx = 0
   let leafIdx = 0
@@ -255,11 +240,12 @@ function verifyMultiproof(hashes: RLPData[], leaves: RLPData[], instructions: Ui
         stack[stackTop++] = new StackItem(NodeType.Hash, h, null)
         break
       case Opcode.Leaf:
-        if (leafIdx >= leaves.length) {
+        if (leafIdx >= leafKeys.length) {
           throw new Error('Not enough leaves in multiproof')
         }
-        let l = leaves[leafIdx++].buffer
-        let h = hash(l)
+        let e = encodeLeaf(leafKeys[leafIdx].buffer, accounts[leafIdx].buffer)
+        leafIdx++
+        let h = hash(e)
         stack[stackTop++] = new StackItem(NodeType.Leaf, h, null)
         break
       case Opcode.Branch:

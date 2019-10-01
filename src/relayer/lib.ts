@@ -1,8 +1,8 @@
 import BN = require('bn.js')
 import Account from 'ethereumjs-account'
 import { keccak256, ecsign, stripZeros } from 'ethereumjs-util'
-import { encode } from 'rlp'
-import { Multiproof, verifyMultiproof, makeMultiproof, rawMultiproof } from '../multiproof'
+import { encode, decode } from 'rlp'
+import { Multiproof, verifyMultiproof, makeMultiproof, flatEncodeInstructions } from '../multiproof'
 const assert = require('assert')
 const { promisify } = require('util')
 const Wallet = require('ethereumjs-wallet')
@@ -188,5 +188,28 @@ async function getAccount(trie: any, address: Buffer): Promise<Account> {
     return new Account()
   } else {
     return new Account(raw)
+  }
+}
+
+function rawMultiproof(proof: Multiproof, flatInstructions: boolean = false): any {
+  let keys = []
+  let values = []
+  for (const kv of proof.keyvals) {
+    const raw = decode(kv)
+    keys.push(raw[0])
+    values.push(raw[1])
+  }
+  if (flatInstructions) {
+    return [proof.hashes, keys, values, flatEncodeInstructions(proof.instructions)]
+  } else {
+    return [
+      proof.hashes,
+      keys,
+      values,
+      proof.instructions.map(i => {
+        if (i.value !== undefined) return [i.kind, i.value]
+        return [i.kind]
+      }),
+    ]
   }
 }

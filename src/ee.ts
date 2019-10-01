@@ -28,6 +28,16 @@ interface Tx {
 
 export function decodeBlockData(blockData: Buffer): any {
   const d = decode(blockData)
+  let keyvals = []
+  // @ts-ignore
+  assert(d[3].length === d[4].length)
+  // @ts-ignore
+  for (let i = 0; i < d[3].length; i++) {
+    // @ts-ignore
+    keyvals.push(encode([d[3][i], d[4][i]]))
+    // @ts-ignore
+  }
+
   return {
     txes: d[0],
     addrs: d[1],
@@ -35,9 +45,9 @@ export function decodeBlockData(blockData: Buffer): any {
       // @ts-ignore
       hashes: d[2],
       // @ts-ignore
-      keyvals: d[3],
+      keyvals: keyvals,
       // @ts-ignore
-      instructions: flatDecodeInstructions(d[4]),
+      instructions: flatDecodeInstructions(d[5]),
     },
   }
 }
