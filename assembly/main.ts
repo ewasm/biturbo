@@ -8,7 +8,8 @@ import {
   hashExtension,
   hashBranch,
   encodeLeaf,
-  encodeAccount
+  encodeAccount,
+  decodeAccount
 } from "./rlp"
 import { parseU8, padBuf, cmpBuf, stripBuf, hash, nibbleArrToUintArr, addHexPrefix, uintArrToNibbleArr, removeHexPrefix } from './util'
 import { debug, debugMem } from './debug'
@@ -112,29 +113,29 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
       toAccountRaw = updatedAccounts[toIdx] as Uint8Array
     }
 
-    let fromAccount = decode(fromAccountRaw).children
-    let toAccount = decode(toAccountRaw).children
+    let fromAccount = decodeAccount(fromAccountRaw)
+    let toAccount = decodeAccount(toAccountRaw)
     // Sender's nonce should match tx's nonce
-    if (cmpBuf(fromAccount[0].buffer, nonce) != 0) {
+    if (cmpBuf(fromAccount[0], nonce) != 0) {
       throw new Error('Invalid nonce')
     }
     // Sender has enough balance
-    if (cmpBuf(fromAccount[1].buffer, value) == -1) {
+    if (cmpBuf(fromAccount[1], value) == -1) {
       throw new Error('Insufficient funds')
     }
 
     // Update nonce and balances
     value = padBuf(value, 32)
-    let fromBalance = padBuf(fromAccount[1].buffer, 32)
+    let fromBalance = padBuf(fromAccount[1], 32)
     let newFromBalance = new ArrayBuffer(32)
     bignum_sub256(fromBalance.buffer as usize, value.buffer as usize, newFromBalance as usize)
 
-    let toBalance = padBuf(toAccount[1].buffer, 32)
+    let toBalance = padBuf(toAccount[1], 32)
     let newToBalance = new ArrayBuffer(32)
     bignum_add256(toBalance.buffer as usize, value.buffer as usize, newToBalance as usize)
 
     let paddedNonce = padBuf(nonce, 32)
-    let fromNonce = padBuf(fromAccount[0].buffer, 32)
+    let fromNonce = padBuf(fromAccount[0], 32)
     let newFromNonce = new ArrayBuffer(32)
     let one256 = new ArrayBuffer(32)
     let onedv = new DataView(one256)
@@ -143,7 +144,7 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
 
     // Encode updated accounts
     let newFromAccount = encodeAccount(stripBuf(Uint8Array.wrap(newFromNonce)), stripBuf(Uint8Array.wrap(newFromBalance)))
-    let newToAccount = encodeAccount(toAccount[0].buffer, stripBuf(Uint8Array.wrap(newToBalance)))
+    let newToAccount = encodeAccount(toAccount[0], stripBuf(Uint8Array.wrap(newToBalance)))
 
     updatedAccounts[fromIdx] = newFromAccount
     updatedAccounts[toIdx] = newToAccount

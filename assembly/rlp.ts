@@ -16,6 +16,47 @@ const defaultCodeHash: u8[] = [
   197, 210, 70, 1, 134, 247, 35, 60, 146, 126, 125, 178, 220, 199, 3, 192, 229, 0, 182, 83, 202, 130, 39, 59, 123, 250, 216, 4, 93, 133, 164, 112
 ]
 
+
+export function decodeAccount(buf: Uint8Array): Array<Uint8Array> {
+  // Data will have length > 55
+  // buf[0] == 0xf8
+  let dataLen = buf[1]
+
+  let nonce: Uint8Array
+  let nonceLen = buf[2]
+  let offset = 3
+  if (nonceLen == 0x80) {
+    nonce = new Uint8Array(0)
+  } else if (nonceLen <= 0x7f) {
+    nonce = buf.subarray(2, 3)
+  } else {
+    nonce = buf.subarray(3, 3 + nonceLen - 0x80)
+    offset = 3 + nonceLen - 0x80
+  }
+
+  let balance: Uint8Array
+  let balanceFirstByte = buf[offset]
+  if (balanceFirstByte == 0x80) {
+    balance = new Uint8Array(0)
+    offset++
+  } else if (balanceFirstByte <= 0x7f) {
+    balance = buf.subarray(offset, offset + 1)
+    offset++
+  } else {
+    offset++
+    balance = buf.subarray(offset, offset + balanceFirstByte - 0x80)
+    offset = offset + balanceFirstByte - 0x80
+  }
+
+  // stateRoot and codeHash are 32 byte hashes
+  offset++
+  let stateRoot = buf.subarray(offset, offset + 32)
+  offset += 33
+  let codeHash = buf.subarray(offset, offset + 32)
+
+  return [nonce, balance, stateRoot, codeHash]
+}
+
 export function encodeAccount(nonce: Uint8Array, balance: Uint8Array): Uint8Array {
   // Nonce and balance are buffers with 0 <= length <= 32
   // We assume stateRoot and codeHash to be constant hashes
