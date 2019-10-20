@@ -1,14 +1,44 @@
 // tslint:disable:no-console
-import { generateTestSuite, TestSuite } from './lib'
+import { generateTestSuite, TestSuite, stateTestRunner, RunnerArgs, TestGetterArgs } from './lib'
 const fs = require('fs')
 const yaml = require('js-yaml')
+const testing = require('ethereumjs-testing')
 
 async function main() {
-  const testSuite = await generateTestSuite()
-  writeScoutConfig(testSuite)
+  const args = process.argv
+
+  if ((args.length === 4) && (args[2] == '--stateTest')) {
+    const testCase = args[3]
+    let testGetterArgs: TestGetterArgs = { test: testCase }
+    let runnerArgs: RunnerArgs = {
+      stateless: true,
+      fork: 'Petersburg',
+      test: testCase,
+      scout: 'true',
+      dist: '?',
+      forkConfig: 'Petersburg',
+      jsontrace: false,
+      debug: false,
+      data: '',
+      gasLimit: 0,
+      value: 0
+    }
+
+    await testing.getTestsFromArgs('GeneralStateTests', async (filename: any, testName: any, test: any) => {
+      const testSuite =  await stateTestRunner(runnerArgs, test, testName)
+      writeScoutConfig(testSuite, testCase + '.yaml')
+    }, testGetterArgs).then( () => {
+    }).catch((err: any) => {
+      console.log('Err: ', err)
+    })
+  } else {
+    const testSuite = await generateTestSuite()
+    writeScoutConfig(testSuite, 'turboproof.yaml')
+  }
+                          
 }
 
-function writeScoutConfig(data: TestSuite) {
+function writeScoutConfig(data: TestSuite, filename: string) {
   const testSuite = {
     beacon_state: {
       execution_scripts: ['build/main_with_keccak.wasm'],
@@ -23,7 +53,7 @@ function writeScoutConfig(data: TestSuite) {
   }
 
   const serializedTestSuite = yaml.safeDump(testSuite)
-  fs.writeFileSync('turboproof.yaml', serializedTestSuite)
+  fs.writeFileSync(filename, serializedTestSuite)
 }
 
 main()

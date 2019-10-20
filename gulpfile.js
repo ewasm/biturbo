@@ -16,15 +16,7 @@ const wabt = require("wabt")();
  * 
  */
 
-
-//const ImportStatementToDelete = '(import "watimports" "$ethash_keccak256" (func $watimports.$ethash_keccak256 (type $t3)))';
-//const ImportStatementToDelete = '(import "watimports" "$ethash_keccak256" (func (;6;) (type 2)))';
-//(import "watimports" "$ethash_keccak256" (func $watimports.$ethash_keccak256 (type $t2)))
-//const ImportStatementToDelete = '(import "watimports" "$ethash_keccak256" (func $watimports.$ethash_keccak256 (type $t2)))';
-//const ImportStatementToDelete = '(import "watimports" "$ethash_keccak256" (func $watimports.$ethash_keccak256 (type 2)))';
 const ImportStatementToDelete = '(import "watimports" "$ethash_keccak256" (func $assembly/keccak/ethash_keccak256 (param i32 i32 i32)))';
-// (import "watimports" "$ethash_keccak256" (func $keccak/ethash_keccak256 (param i32 i32 i32)))
-
 
 /*
   Runtime variants:
@@ -47,7 +39,6 @@ const ImportStatementToDelete = '(import "watimports" "$ethash_keccak256" (func 
 function build(callback) {
   console.log('gulp.js build task..');
   const asc = require("assemblyscript/bin/asc");
-
 
   asc.main([
     "assembly/main.ts",
@@ -128,7 +119,7 @@ function build(callback) {
     console.log("searching for import statement to delete...");
 
     var foundImport = false;
-    for (var i=0; i<20; i++) {
+    for (var i=0; i<30; i++) {
       console.log(mainLines[i]);
       if (mainLines[i].trim() === ImportStatementToDelete) {
         console.log("found import statement!! deleting it...");

@@ -180,7 +180,6 @@ export async function makeMultiproof(trie: any, keys: Buffer[]): Promise<Multipr
       instructions: [{ kind: Opcode.Hasher }],
     }
   }
-
   const keysNibbles = []
   for (const k of keys) {
     keysNibbles.push(stringToNibbles(k))
@@ -246,6 +245,7 @@ async function _makeMultiproof(trie: any, rootHash: any, keys: number[][]): Prom
           throw new Error('Key not in trie')
         }
         const p = await _makeMultiproof(trie, child, table[i])
+        
         proof.hashes.push(...p.hashes)
         proof.keyvals.push(...p.keyvals)
         proof.instructions.push(...p.instructions)
@@ -291,7 +291,6 @@ async function _makeMultiproof(trie: any, rootHash: any, keys: number[][]): Prom
   } else {
     throw new Error('Unexpected node type')
   }
-
   return proof
 }
 
