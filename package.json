@@ -1,7 +1,7 @@
 {
-  "name": "turbo-token",
+  "name": "biturbo",
   "version": "0.0.1",
-  "description": "Stateless token based on turboproofs",
+  "description": "Eth1 EE using turboproofs",
   "main": "index.js",
   "scripts": {
     "ee": "npm run build:as && scout.ts turboproof.yaml",
