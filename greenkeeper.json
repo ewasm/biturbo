@@ -1,0 +1,10 @@
+{
+  "groups": {
+    "default": {
+      "packages": [
+        "assembly/package.json",
+        "package.json"
+      ]
+    }
+  }
+}
