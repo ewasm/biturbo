@@ -1,5 +1,7 @@
 # Biturbo
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/ewasm/biturbo.svg)](https://greenkeeper.io/)
+
 Biturbo is a fork of @cdetrio's [turbo-mpas](https://github.com/cdetrio/scout.ts/tree/turbo-mpas). It adapts Alexey's Akhunov's [turboproof](https://github.com/ledgerwatch/turbo-geth/blob/master/docs/programmers_guide/guide.md) as implemented by @gballet in [multiproof-rs](https://github.com/gballet/multiproof-rs) and the Typescript [version](https://github.com/ethereumjs/merkle-patricia-tree/pull/101).
 
 In addition to the AS EE implementation, the repo also includes an [implementation](src/multiproof.ts) of Turboproof in typescript, a [relayer](src/relayer/lib.ts) which can generate scout test suites to simulate a shard block, and an [implementation](src/ee.ts) of the high-level EE logic in typescript.

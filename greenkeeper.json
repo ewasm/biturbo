@@ -1,0 +1,14 @@
+{
+  "groups": {
+    "main": {
+      "packages": [
+        "package.json"
+      ]
+    },
+    "assembly": {
+      "packages": [
+        "assembly/package.json"
+      ]
+    }
+  }
+}
