@@ -1,9 +1,13 @@
 {
   "groups": {
-    "default": {
+    "main": {
       "packages": [
-        "assembly/package.json",
         "package.json"
+      ]
+    },
+    "assembly": {
+      "packages": [
+        "assembly/package.json"
       ]
     }
   }
