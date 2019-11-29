@@ -8,6 +8,8 @@
     "token:relayer": "ts-node src/relayer/bin.ts",
     "token:build": "gulp token",
     "token:run": "scout.ts turbo-token.yaml",
+    "token:relayer:realistic": "ts-node src/relayer/bin.ts --realistic test/fixture/eth_getProof_sample.json",
+    "token:realistic": "npm run token:relayer:realistic && npm run token:build && scout.ts turbo-token-realistic.yaml",
     "evm": "npm run evm:relayer && npm run evm:build && npm run evm:run",
     "evm:relayer": "ts-node src/relayer/bin.ts --basicEvm",
     "evm:build": "gulp evm",

@@ -1,14 +1,16 @@
 // tslint:disable:no-console
 import { generateTestSuite, TestSuite, stateTestRunner, RunnerArgs, TestGetterArgs } from './lib'
 import { basicEvmTestSuite } from './basic-evm'
+import { generateRealisticTestSuite } from './realistic'
 const fs = require('fs')
+const path = require('path')
 const yaml = require('js-yaml')
 const testing = require('ethereumjs-testing')
 
 async function main() {
   const args = process.argv
 
-  if (args.length === 4 && args[2] == '--stateTest') {
+  if (args.length === 4 && args[2] === '--stateTest') {
     const testCase = args[3]
     const testGetterArgs: TestGetterArgs = { test: testCase }
     const runnerArgs: RunnerArgs = {
@@ -38,6 +40,10 @@ async function main() {
       .catch((err: any) => {
         console.log('Err: ', err)
       })
+  } else if (args.length === 4 && args[2] === '--realistic') {
+    const rpcData = JSON.parse(fs.readFileSync(process.argv[3]))
+    const testSuite = await generateRealisticTestSuite(rpcData)
+    writeScoutConfig(testSuite, 'turbo-token-realistic.yaml', 'build/token_with_keccak.wasm')
   } else if (args.length === 3 && args[2] === '--basicEvm') {
     const testSuite = await basicEvmTestSuite()
     writeScoutConfig(testSuite, 'basic-evm.yaml', 'build/evm_with_keccak.wasm')

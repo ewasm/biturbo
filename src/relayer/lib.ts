@@ -120,21 +120,7 @@ async function generateTxes(trie: any, accounts: AccountInfo[], count = 50) {
   const unsortedAddrs = Object.keys(toProve).map(s => Buffer.from(s, 'hex'))
   const keys = unsortedAddrs.map(a => keccak256(a))
   keys.sort(Buffer.compare)
-  // Sort addresses based on their hashes.
-  // Naive algorithm
-  const sortedAddrs = new Array(keys.length).fill(undefined)
-  for (const a of unsortedAddrs) {
-    let idx = -1
-    const h = keccak256(a)
-    for (let i = 0; i < keys.length; i++) {
-      const k = keys[i]
-      if (h.equals(k)) {
-        idx = i
-      }
-    }
-    assert(idx >= 0)
-    sortedAddrs[idx] = a
-  }
+  const sortedAddrs = sortAddrsByHash(unsortedAddrs)
 
   const proof = await makeMultiproof(trie, keys)
   // Verify proof is valid
@@ -171,6 +157,29 @@ export async function transfer(trie: any, tx: SimulationData) {
 
   await putAccount(trie, from, fromAcc)
   await putAccount(trie, to, toAcc)
+}
+
+// Sort addresses based on their hashes.
+// Naive algorithm
+export function sortAddrsByHash(addrs: Buffer[]): Buffer[] {
+  const keys = addrs.map((a: Buffer) => keccak256(a))
+  keys.sort(Buffer.compare)
+  const sortedAddrs = new Array(keys.length).fill(undefined)
+
+  for (const a of addrs) {
+    let idx = -1
+    const h = keccak256(a)
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i]
+      if (h.equals(k)) {
+        idx = i
+      }
+    }
+    assert(idx >= 0)
+    sortedAddrs[idx] = a
+  }
+
+  return sortedAddrs
 }
 
 export async function generateAccounts(trie: any, count = 500): Promise<AccountInfo[]> {
@@ -375,7 +384,7 @@ async function putAccount(trie: any, address: Buffer, account: Account) {
   await promisify(trie.put.bind(trie))(address, account.serialize())
 }
 
-async function getAccount(trie: any, address: Buffer): Promise<Account> {
+export async function getAccount(trie: any, address: Buffer): Promise<Account> {
   const raw = await promisify(trie.get.bind(trie))(address)
   if (!raw) {
     return new Account()
