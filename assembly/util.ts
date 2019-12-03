@@ -32,7 +32,7 @@ export function cmpBuf(buf: Uint8Array, other: Uint8Array): usize {
   // Assume Big-endian
   for (let i = 0; i < buf.length; i++) {
     let a = buf[i]
-    let b = buf[i]
+    let b = other[i]
     if (a == b) {
       continue
     } else if (a < b) {
