@@ -242,6 +242,7 @@ function verifyMultiproofAndUpdate(
         if (leafIdx >= leafKeys.length) {
           throw new Error('Not enough leaves in multiproof')
         }
+
         let path = removeHexPrefix(uintArrToNibbleArr(leafKeys[leafIdx].buffer))
         paths[leafIdx] = path
         let l = encodeLeaf(leafKeys[leafIdx].buffer, accounts[leafIdx].buffer)
@@ -294,6 +295,8 @@ function verifyMultiproofAndUpdate(
         }
 
         let key = nibbleArrToUintArr(addHexPrefix(nibbles, false))
+        // addHexPrefix modifies array in-place
+        nibbles = removeHexPrefix(nibbles)
         let h = hashExtension(key, childHash)
         let nh = hashExtension(key, newChildHash)
 
