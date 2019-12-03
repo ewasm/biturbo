@@ -132,3 +132,13 @@ export function nibbleArrToUintArr(arr: Array<u8>): Uint8Array {
 
   return buf;
 }
+
+export function u8ArrToUintArr(arr: Array<u8>): Uint8Array {
+  let buf = new Uint8Array(arr.length)
+
+  for (let i = 0; i < arr.length; i++) {
+    buf[i] = arr[i]
+  }
+
+  return buf
+}
