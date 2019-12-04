@@ -16,6 +16,9 @@
            paths:
              - node_modules
        - run:
+           name: Lint
+           command: npm run lint
+       - run:
            name: Run tests
            command: npm test
        - run:
