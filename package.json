@@ -19,7 +19,6 @@
     "lint": "npm run format && npm run tslint && npm run tsc",
     "format": "ethereumjs-config-format",
     "format:fix": "ethereumjs-config-format-fix",
-    "formatTest": "node ./scripts/formatTest",
     "tsc": "ethereumjs-config-tsc",
     "test": "ts-node node_modules/tape/bin/tape test/**/*.ts"
   },
