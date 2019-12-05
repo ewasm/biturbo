@@ -163,9 +163,9 @@ export function hashExtension(key: Uint8Array, value: Uint8Array): Uint8Array {
   if (key.length == 1) {
     buf[offset++] = key[0]
   } else {
-    buf[offset] = 0x80 + key.length
+    buf[offset++] = 0x80 + key.length
     memory.copy(buf.buffer as usize + buf.byteOffset + offset, key.buffer as usize + key.byteOffset, key.length)
-    offset += keyBufLen
+    offset += key.length as u8
   }
 
   // Encode value
