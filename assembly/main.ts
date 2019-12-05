@@ -31,7 +31,6 @@ export enum Opcode {
   Hasher = 1,
   Leaf = 2,
   Extension = 3,
-  Add = 4,
 }
 
 export enum NodeType {
@@ -271,27 +270,38 @@ function verifyMultiproofAndUpdate(
         stack[stackTop++] = new StackItem(NodeType.Leaf, [leafIdx - 1], h, null, nh, null)
         break
     case Opcode.Branch:
-        let idx = instructions[pc++]
-        let n = stack[--stackTop]
+        let indicesLen = instructions[pc++]
+        let branchIndices = Array.create<u8>(indicesLen)
+        for (let i = 0; i < (indicesLen as i32); i++) {
+          branchIndices[i] = instructions[pc + i]
+        }
+        pc += indicesLen
 
         let children = new Array<Uint8Array | null>(17)
         let newChildren = new Array<Uint8Array | null>(17)
-        let ch: Uint8Array
-        let nch: Uint8Array
-        if (n.kind == NodeType.Branch) {
-          ch = hashBranch(n.sponge as Array<Uint8Array | null>)
-          nch = hashBranch(n.newSponge as Array<Uint8Array | null>)
-        } else {
-          ch = n.hash as Uint8Array
-          nch = n.newHash as Uint8Array
-        }
-        children[idx] = ch
-        newChildren[idx] = nch
+        let pathIndices = new Array<usize>()
+        for (let i = 0; i < branchIndices.length; i++) {
+          let idx = branchIndices[i]
+          let n = stack[--stackTop]
+          let ch: Uint8Array
+          let nch: Uint8Array
+          if (n.kind == NodeType.Branch) {
+            ch = hashBranch(n.sponge as Array<Uint8Array | null>)
+            nch = hashBranch(n.newSponge as Array<Uint8Array | null>)
+          } else {
+            ch = n.hash as Uint8Array
+            nch = n.newHash as Uint8Array
+          }
+          children[idx] = ch
+          newChildren[idx] = nch
 
-        stack[stackTop++] = new StackItem(NodeType.Branch, n.pathIndices.slice(0), null, children, null, newChildren)
-        for (let i = 0; i < n.pathIndices.length; i++) {
-          paths[n.pathIndices[i]].unshift(idx)
+          pathIndices = pathIndices.concat(n.pathIndices)
+          for (let i = 0; i < n.pathIndices.length; i++) {
+            paths[n.pathIndices[i]].unshift(idx)
+          }
         }
+
+        stack[stackTop++] = new StackItem(NodeType.Branch, pathIndices, null, children, null, newChildren)
         break
     case Opcode.Extension:
         let nibblesLen = instructions[pc++]
@@ -321,39 +331,6 @@ function verifyMultiproofAndUpdate(
         stack[stackTop++] = new StackItem(NodeType.Extension, n.pathIndices.slice(0), h, null, nh, null)
         for (let i = 0; i < n.pathIndices.length; i++) {
           paths[n.pathIndices[i]] = nibbles.concat(paths[n.pathIndices[i]])
-        }
-        break
-    case Opcode.Add:
-        let n1 = stack[--stackTop]
-        let n2 = stack[--stackTop]
-        let idx = instructions[pc++]
-
-        if (n2.kind != NodeType.Branch) {
-          throw new Error('Expected branch on top of stack')
-        }
-
-        let childHash: Uint8Array
-        let newChildHash: Uint8Array
-        if (n1.kind == NodeType.Branch) {
-          childHash = hashBranch(n1.sponge as Array<Uint8Array | null>)
-          newChildHash = hashBranch(n1.newSponge as Array<Uint8Array | null>)
-        } else {
-          childHash = n1.hash as Uint8Array
-          newChildHash = n1.newHash as Uint8Array
-        }
-
-        for (let i = 0; i < n1.pathIndices.length; i++) {
-          let pathIdx = n1.pathIndices[i]
-          if (!n2.pathIndices.includes(pathIdx)) {
-            n2.pathIndices.push(pathIdx)
-          }
-        }
-        n2.sponge[idx] = childHash
-        n2.newSponge[idx] = newChildHash
-        stack[stackTop++] = n2
-
-        for (let i = 0; i < n1.pathIndices.length; i++) {
-          paths[n1.pathIndices[i]].unshift(idx)
         }
         break
     }
