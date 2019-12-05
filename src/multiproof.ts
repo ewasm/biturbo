@@ -43,7 +43,7 @@ export interface StackItem {
   // For now keeping raw for re-constructuring trie
   raw: any
   pathIndices: number[]
-  // Buffer or raw (for embedded nodes), or sponge for branch
+  // Buffer or raw (for embedded nodes)
   hash: any
 }
 
@@ -85,31 +85,22 @@ export function verifyMultiproof(root: Buffer, proof: Multiproof, keys: Buffer[]
         }
         children[idx] = n
 
-        let nh = n.hash
-        if (n.kind === NodeType.Branch) {
-          nh = hashBranch(nh)
-        }
-
-        sponge[idx] = nh
+        sponge[idx] = n.hash
         pathIndices = [...pathIndices, ...n.pathIndices]
         for (const pi of n.pathIndices) {
           paths[pi] = [idx, ...paths[pi]]
         }
       }
       const uniqPathIndices = Array.from(new Set(pathIndices))
-      stack.push({ kind: NodeType.Branch, raw: children, pathIndices: uniqPathIndices, hash: sponge })
+      const h = keccak256(encode(sponge))
+      stack.push({ kind: NodeType.Branch, raw: children, pathIndices: uniqPathIndices, hash: h })
     } else if (instr.kind === Opcode.Extension) {
       const n = stack.pop()
       if (!n) {
         throw new Error('Stack underflow')
       }
 
-      // Fetch child's hash from hashStack or compute if
-      // it's a branch
       let nh = n.hash
-      if (n.kind === NodeType.Branch) {
-        nh = hashBranch(nh)
-      }
       // Compute the extension node's hash and push to hashStack
       const raw = [nibblesToBuffer(addHexPrefix(instr.value as number[], false)), nh]
       const e = encode(raw)
