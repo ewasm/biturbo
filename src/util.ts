@@ -9,14 +9,10 @@ export function bufToU8(b: Buffer): number {
 export function lookupNode(trie: any, hash: any) {
   return new Promise((resolve, reject) => {
     try {
-      console.log('[util/lookupNode] hash: ', hash)
-      console.log('[util/lookupNode] rootHash: ', trie.root)
       trie._lookupNode(hash, (v: any) => {
-        console.log('[util/lookupNode] v: ', v)
         resolve(v)
       })
     } catch (e) {
-      console.log('trie_lookupNode ERROR: ', e)
       reject(e)
     }
   })

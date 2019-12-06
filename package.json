@@ -5,7 +5,11 @@
   "main": "index.js",
   "scripts": {
     "ee": "npm run build:as && scout.ts turboproof.yaml",
-    "relayer": "npm run build && ts-node src/relayer/bin.ts",
+    "relayer": "ts-node src/relayer/bin.ts",
+    "evm": "npm run evm-relayer && npm run evm-build && npm run evm-run",
+    "evm-relayer": "ts-node src/relayer/bin.ts --stateTest add11",
+    "evm-build": "npm run build:as",
+    "evm-run": "npx scout.ts add11.yaml",
     "build": "ethereumjs-config-build",
     "build:as": "gulp",
     "tslint": "ethereumjs-config-tslint",

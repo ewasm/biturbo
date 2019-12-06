@@ -3,16 +3,13 @@ import Account from 'ethereumjs-account'
 import { keccak256, ecsign, stripZeros } from 'ethereumjs-util'
 import { encode, decode } from 'rlp'
 import { Multiproof, verifyMultiproof, makeMultiproof, flatEncodeInstructions } from '../multiproof'
-
-import * as fs from 'fs'
+import VM from 'ethereumjs-vm'
+import { Transaction } from 'ethereumjs-tx'
 
 const assert = require('assert')
 const { promisify } = require('util')
 const Wallet = require('ethereumjs-wallet')
 const Trie = require('merkle-patricia-tree/secure')
-const VM = require('ethereumjs-vm').default
-const Transaction = require('ethereumjs-tx').Transaction
-
 
 export interface TestSuite {
   preStateRoot: Buffer
@@ -211,7 +208,7 @@ export async function stateTestRunner(runnerArgs: RunnerArgs, test: any, testNam
   const preStateRoot = trie.root
   const [txes, addrs, multiproof, simulationData, pks] = await getTestsTxes(trie, accounts, test)
 
-  const blockData = encode([txes, addrs, codeHashes, bytecode, ...rawMultiproof(multiproof as Multiproof, true)])
+  const blockData = encode([txes, addrs, ...rawMultiproof(multiproof as Multiproof, true), codeHashes, bytecode])
 
   console.log(`[stateTestRunner] block data length: ${blockData.length}`)
 
@@ -424,13 +421,6 @@ function rawMultiproof(proof: Multiproof, flatInstructions: boolean = false): an
     values.push(raw[1])
   }
   if (flatInstructions) {
-    // TODO: What is this for?
-    for (let k = 0; k < keys.length; k++) {
-    }
-
-    for (let v = 0; v < values.length; v++) {
-      console.log(`[rawMultiproof] value: ${JSON.stringify(values[v])}`)
-    }
     return [proof.hashes, keys, values, flatEncodeInstructions(proof.instructions)]
   } else {
     return [

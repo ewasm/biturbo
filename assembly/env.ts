@@ -3,9 +3,7 @@ export declare function eth2_loadPreStateRoot(offset: u32): void;
 export declare function eth2_blockDataSize(): u32;
 export declare function eth2_blockDataCopy(outputOffset: u32, offset: u32, length: u32): void;
 export declare function eth2_savePostStateRoot(offset: u32): void;
-export declare function eth2_pushNewDeposit(offseT: u32): void;
-export declare function eth2_setBignumStack(startData: u32): void;
-export declare function eth2_setMemoryPtr(startData: u32): void;
+export declare function eth2_pushNewDeposit(offset: u32): void;
 
 // debug namespace
 export declare function debug_print32(value: i32): void;

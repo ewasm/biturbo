@@ -21,7 +21,7 @@ import {
   eth2_savePostStateRoot,
   bignum_add256,
   bignum_sub256
-} from './env'
+} from '../node_modules/scout.ts/assembly/env'
 
 
 import { interpret } from "./evm"
@@ -44,7 +44,6 @@ export enum NodeType {
 // for Map<UintArray,Node> binaryen toText generates function names with commas, which wabt doesn't like.
 var Trie = new Map<usize,Node>();
 
-
 class Node {
   constructor(
     //public type: u8,
@@ -62,7 +61,7 @@ export function main(): void {
   let preStateRootBuf = new ArrayBuffer(32)
   let preStateRoot = Uint8Array.wrap(preStateRootBuf, 0, 32)
   eth2_loadPreStateRoot(preStateRootBuf as usize)
-  
+
   // INPUT 2: proof data from the EEI
   let blockDataSize = eth2_blockDataSize()
   let blockDataBuf = new ArrayBuffer(blockDataSize)
@@ -78,29 +77,29 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
   // input data is RLP
   let input_decoded = decode(blockData);
   // input_decoded is type RLPData: { buffer: Uint8Array, children: RLPData[] }
-  // [txes, addrs, codeHashes, bytecode, hashes, leaves, instructions]
-  
-  let hash1: Uint8Array = new Uint8Array(0)
-  if (input_decoded.children[2].buffer.length !== 0) {
-    hash1 = input_decoded.children[2].children[0].buffer
-  }
+  // [txes, addrs, hashes, leaves, instructions, codeHashes, bytecode]
   
   let txes = input_decoded.children[0].children       // txes
   let addrs = input_decoded.children[1].children      // addrs
-  let codeHashes = input_decoded.children[2].children // codeHashes
-  let bytecode = input_decoded.children[3].children   // bytecode
-  let hashes = input_decoded.children[4].children     // hashes
-  let leafKeys = input_decoded.children[5].children   // leaves
-  let accounts = input_decoded.children[6].children   // accounts
+  let hashes = input_decoded.children[2].children     // hashes
+  let leafKeys = input_decoded.children[3].children   // leaves
+  let accounts = input_decoded.children[4].children   // accounts
   
   // Instructions are flat-encoded
-  let instructions = input_decoded.children[7].buffer // instructions
+  let instructions = input_decoded.children[5].buffer // instructions
+
+  let codeHashes: RLPData[] = []
+  let bytecode: RLPData[] = []
+  if (input_decoded.children.length == 8) {
+    codeHashes = input_decoded.children[6].children // codeHashes
+    bytecode = input_decoded.children[7].children   // bytecode
+  }
 
   if (addrs.length !== leafKeys.length || addrs.length !== accounts.length) {
     throw new Error('invalid multiproof')
   }
-  let updatedAccounts = new Array<Uint8Array | null>(accounts.length)
   
+  let updatedAccounts = new Array<Uint8Array | null>(accounts.length)
   for (let i = 0; i < txes.length; i++) {
     let tx = txes[i]
     // [toIdx, value, nonce, fromIdx]
@@ -160,13 +159,11 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
     updatedAccounts[fromIdx] = newFromAccount
     updatedAccounts[toIdx] = newToAccount
 
-    
     // check if to account is contract
     if (isContract(toAccount)) {
       let code = getCode(toAccount, codeHashes, bytecode)
-      interpret(code)                  // TODO: interpret code, interpret function should be on its own module
+      interpret(code)
     }
-    //printCodeHash(toAccount)
   }
 
   let keys = Array.create<Uint8Array>(addrs.length)
@@ -609,7 +606,7 @@ function isContract(account: Array<Uint8Array>): bool {
   let empty = Uint8Array.wrap(emptyBuf.buffer, 0, 32)
 
   
-  if (eqBuffer(account[3], empty)) {
+  if (cmpBuf(account[3], empty) === 0) {
     return false
   } else {
     return true
@@ -617,24 +614,12 @@ function isContract(account: Array<Uint8Array>): bool {
 
 }
 
-function eqBuffer(buff1: Uint8Array, buff2: Uint8Array): bool {
-  if (buff1.length != buff2.length)
-    return false
-
-  for (let i = 0; i < buff1.length; i++) {
-    if (buff1[i] != buff2[i])
-      return false
-  }
-
-  return true
-}
-
 function getCode(account: Array<Uint8Array>, codeHashes: RLPData[], bytecode: RLPData[]): Uint8Array {
   let codeHash = account[3]
   let index = -1
 
   for (let i = 0; i < codeHashes.length; i++) {
-    if (eqBuffer(codeHash, codeHashes[i].buffer)) {
+    if (cmpBuf(codeHash, codeHashes[i].buffer) === 0) {
       index = i
       break
     }
