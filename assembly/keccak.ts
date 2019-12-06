@@ -1,5 +1,3 @@
-
-
 /**
 * to call a wasm function defined outside of AS from within AS, I guess
 * we have declare it as an import. the function won't actually be an imported

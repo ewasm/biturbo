@@ -9,7 +9,9 @@ export function bufToU8(b: Buffer): number {
 export function lookupNode(trie: any, hash: any) {
   return new Promise((resolve, reject) => {
     try {
-      trie._lookupNode(hash, (v: any) => resolve(v))
+      trie._lookupNode(hash, (v: any) => {
+        resolve(v)
+      })
     } catch (e) {
       reject(e)
     }

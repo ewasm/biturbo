@@ -13,6 +13,7 @@ import {
 } from "./rlp"
 import { parseU8, padBuf, cmpBuf, stripBuf, hash, nibbleArrToUintArr, addHexPrefix, uintArrToNibbleArr, removeHexPrefix } from './util'
 import { debug, debugMem } from './debug'
+
 import {
   eth2_blockDataSize,
   eth2_blockDataCopy,
@@ -22,6 +23,8 @@ import {
   bignum_sub256
 } from '../node_modules/scout.ts/assembly/env'
 
+
+import { interpret } from "./evm"
 
 export enum Opcode {
   Branch = 0,
@@ -40,7 +43,6 @@ export enum NodeType {
 
 // for Map<UintArray,Node> binaryen toText generates function names with commas, which wabt doesn't like.
 var Trie = new Map<usize,Node>();
-
 
 class Node {
   constructor(
@@ -75,22 +77,29 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
   // input data is RLP
   let input_decoded = decode(blockData);
   // input_decoded is type RLPData: { buffer: Uint8Array, children: RLPData[] }
-  // [txes, addrs, hashes, leaves, instructions]
-  let hash1 = input_decoded.children[2].children[0].buffer
-
-  let txes = input_decoded.children[0].children
-  let addrs = input_decoded.children[1].children
-  let hashes = input_decoded.children[2].children
-  let leafKeys = input_decoded.children[3].children
-  let accounts = input_decoded.children[4].children
+  // [txes, addrs, hashes, leaves, instructions, codeHashes, bytecode]
+  
+  let txes = input_decoded.children[0].children       // txes
+  let addrs = input_decoded.children[1].children      // addrs
+  let hashes = input_decoded.children[2].children     // hashes
+  let leafKeys = input_decoded.children[3].children   // leaves
+  let accounts = input_decoded.children[4].children   // accounts
+  
   // Instructions are flat-encoded
-  let instructions = input_decoded.children[5].buffer
+  let instructions = input_decoded.children[5].buffer // instructions
+
+  let codeHashes: RLPData[] = []
+  let bytecode: RLPData[] = []
+  if (input_decoded.children.length == 8) {
+    codeHashes = input_decoded.children[6].children // codeHashes
+    bytecode = input_decoded.children[7].children   // bytecode
+  }
 
   if (addrs.length !== leafKeys.length || addrs.length !== accounts.length) {
     throw new Error('invalid multiproof')
   }
+  
   let updatedAccounts = new Array<Uint8Array | null>(accounts.length)
-
   for (let i = 0; i < txes.length; i++) {
     let tx = txes[i]
     // [toIdx, value, nonce, fromIdx]
@@ -100,7 +109,6 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
     let nonce = tx.children[2].buffer
 
     // TODO: Hash unsigned tx, recover from address, check against fromIdx
-
     let fromAccountRaw = accounts[fromIdx].buffer
     // If `from` has been modified by previous txes
     // load the updated one.
@@ -115,10 +123,12 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
 
     let fromAccount = decodeAccount(fromAccountRaw)
     let toAccount = decodeAccount(toAccountRaw)
+
     // Sender's nonce should match tx's nonce
     if (cmpBuf(fromAccount[0], nonce) != 0) {
       throw new Error('Invalid nonce')
     }
+
     // Sender has enough balance
     if (cmpBuf(fromAccount[1], value) == -1) {
       throw new Error('Insufficient funds')
@@ -148,12 +158,19 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
 
     updatedAccounts[fromIdx] = newFromAccount
     updatedAccounts[toIdx] = newToAccount
+
+    // check if to account is contract
+    if (isContract(toAccount)) {
+      let code = getCode(toAccount, codeHashes, bytecode)
+      interpret(code)
+    }
   }
 
   let keys = Array.create<Uint8Array>(addrs.length)
   for (let i = 0; i < addrs.length; i++) {
     keys.push(hash(addrs[i].buffer))
   }
+
 
   let postStateRoot = verifyMultiproofAndUpdate(preStateRoot, hashes, leafKeys, accounts, updatedAccounts as Uint8Array[], instructions, keys)
 
@@ -228,17 +245,18 @@ function verifyMultiproofAndUpdate(
     paths[i] = new Array<u8>()
   }
 
+
   while (pc < instructions.length) {
     let op = instructions[pc++]
     switch (op) {
-      case Opcode.Hasher:
+    case Opcode.Hasher:
         if (hashIdx >= hashes.length) {
           throw new Error('Not enough hashes in multiproof')
         }
         let h = hashes[hashIdx++].buffer
         stack[stackTop++] = new StackItem(NodeType.Hash, [], h, null, h, null)
         break
-      case Opcode.Leaf:
+    case Opcode.Leaf:
         if (leafIdx >= leafKeys.length) {
           throw new Error('Not enough leaves in multiproof')
         }
@@ -252,7 +270,7 @@ function verifyMultiproofAndUpdate(
         let nh = hash(ul)
         stack[stackTop++] = new StackItem(NodeType.Leaf, [leafIdx - 1], h, null, nh, null)
         break
-      case Opcode.Branch:
+    case Opcode.Branch:
         let idx = instructions[pc++]
         let n = stack[--stackTop]
 
@@ -275,7 +293,7 @@ function verifyMultiproofAndUpdate(
           paths[n.pathIndices[i]].unshift(idx)
         }
         break
-      case Opcode.Extension:
+    case Opcode.Extension:
         let nibblesLen = instructions[pc++]
         let nibbles = Array.create<u8>(nibblesLen)
         for (let i = 0; i < (nibblesLen as i32); i++) {
@@ -305,7 +323,7 @@ function verifyMultiproofAndUpdate(
           paths[n.pathIndices[i]] = nibbles.concat(paths[n.pathIndices[i]])
         }
         break
-      case Opcode.Add:
+    case Opcode.Add:
         let n1 = stack[--stackTop]
         let n2 = stack[--stackTop]
         let idx = instructions[pc++]
@@ -583,4 +601,36 @@ function rehashNode(staleHashPtr: usize): usize {
 
   // TODO: handle extension nodes
   throw new Error('only branch nodes and leaf nodes are implemented');
+}
+
+function isContract(account: Array<Uint8Array>): bool {
+  let emptyBuf = Array.create<u8>(32)
+  emptyBuf = [197, 210, 70, 1, 134, 247, 35, 60, 146, 126, 125, 178, 220, 199, 3, 192, 229, 0, 182, 83, 202, 130, 39, 59, 123, 250, 216, 4, 93, 133, 164, 112]
+  let empty = Uint8Array.wrap(emptyBuf.buffer, 0, 32)
+
+  
+  if (cmpBuf(account[3], empty) === 0) {
+    return false
+  } else {
+    return true
+  }
+
+}
+
+function getCode(account: Array<Uint8Array>, codeHashes: RLPData[], bytecode: RLPData[]): Uint8Array {
+  let codeHash = account[3]
+  let index = -1
+
+  for (let i = 0; i < codeHashes.length; i++) {
+    if (cmpBuf(codeHash, codeHashes[i].buffer) === 0) {
+      index = i
+      break
+    }
+  }
+
+  if (index >= 0) {
+    return bytecode[index].buffer
+  } else {
+    return new Uint8Array(0)
+  }
 }
