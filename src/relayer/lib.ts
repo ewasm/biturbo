@@ -234,8 +234,6 @@ async function getTestsTxes(trie: any, accounts: AccountInfo[], test: any) {
   const root = trie.root
   const toProve: any = {}
 
-  const count = 10
-
   const from = accounts[1].address
   const to = accounts[0].address
 
@@ -244,7 +242,6 @@ async function getTestsTxes(trie: any, accounts: AccountInfo[], test: any) {
 
   simulationData.push({ from, to, value, nonce })
 
-  const fromAccount = await getAccount(trie, from)
   const fromKey = from.toString('hex')
 
   if (!toProve[fromKey]) {
@@ -252,7 +249,6 @@ async function getTestsTxes(trie: any, accounts: AccountInfo[], test: any) {
   }
   toProve[fromKey].push({ txId: 0, fieldIdx: 3 })
 
-  const toAccount = await getAccount(trie, to)
   const toKey = to.toString('hex')
 
   if (!toProve[toKey]) {
@@ -269,15 +265,6 @@ async function getTestsTxes(trie: any, accounts: AccountInfo[], test: any) {
   
   const txHash = keccak256(txRlp)
 
-  const txSig = ecsign(txHash, accounts[1].privateKey)
-  
-  assert(txSig.r.byteLength === 32)
-  assert(txSig.s.byteLength === 32)
-  assert(txSig.v < 256)
-  const v = new Uint8Array(1)
-  v[0] = txSig.v
-  const sigBytes = Buffer.concat([txSig.r, txSig.s, v], 65)
-  
   txes.push([
     to,
     stripZeros(value.toBuffer('be', 32)),
