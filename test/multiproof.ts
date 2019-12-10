@@ -20,12 +20,11 @@ const SecureTrie = require('merkle-patricia-tree/secure')
 
 tape('decode and encode instructions', t => {
   t.test('rlp encoding', st => {
-    const raw = Buffer.from('d0c20201c20405c603c403030303c28006', 'hex')
+    const raw = Buffer.from('cdc102c603c403030303c380c106', 'hex')
     const expected = [
       { kind: Opcode.Leaf },
-      { kind: Opcode.Add, value: 5 },
       { kind: Opcode.Extension, value: [3, 3, 3, 3] },
-      { kind: Opcode.Branch, value: 6 },
+      { kind: Opcode.Branch, value: [6] },
     ]
     // @ts-ignore
     const res = decodeInstructions(rlp.decode(raw))
@@ -34,12 +33,11 @@ tape('decode and encode instructions', t => {
   })
 
   t.test('flat encoding', st => {
-    const raw = Buffer.from('0204050304030303030006', 'hex')
+    const raw = Buffer.from('02030403030303000106', 'hex')
     const instructions = [
       { kind: Opcode.Leaf },
-      { kind: Opcode.Add, value: 5 },
       { kind: Opcode.Extension, value: [3, 3, 3, 3] },
-      { kind: Opcode.Branch, value: 6 },
+      { kind: Opcode.Branch, value: [6] },
     ]
     const encoded = flatEncodeInstructions(instructions)
     st.assert(raw.equals(encoded))
@@ -70,7 +68,6 @@ tape('decode and encode multiproof', t => {
   })
 
   t.test('decode and encode two out of three leaves with extension', async st => {
-    console.log(Trie)
     const t = new Trie()
     const put = promisify(t.put.bind(t))
     const key1 = Buffer.from('1'.repeat(40), 'hex')
@@ -104,7 +101,7 @@ tape('multiproof tests', (t: tape.Test) => {
       { kind: Opcode.Hasher },
       { kind: Opcode.Branch, value: 1 },
       { kind: Opcode.Leaf },
-      { kind: Opcode.Add, value: 2 },
+      //{ kind: Opcode.Add, value: 2 },
     ]
     const proof = decodeMultiproof(raw)
     st.deepEqual(proof.instructions, expectedInstructions)
@@ -126,9 +123,9 @@ tape('multiproof tests', (t: tape.Test) => {
       { kind: Opcode.Leaf },
       { kind: Opcode.Branch, value: 1 },
       { kind: Opcode.Leaf },
-      { kind: Opcode.Add, value: 2 },
+      //{ kind: Opcode.Add, value: 2 },
       { kind: Opcode.Hasher },
-      { kind: Opcode.Add, value: 8 },
+      //{ kind: Opcode.Add, value: 8 },
     ]
     const proof = decodeMultiproof(raw)
     st.deepEqual(proof.instructions, expectedInstructions)
@@ -168,7 +165,7 @@ tape('make multiproof', t => {
     const proof = await makeMultiproof(t, [key1])
     st.equal(proof.hashes.length, 1)
     st.equal(proof.keyvals.length, 1)
-    st.equal(proof.instructions.length, 4)
+    st.equal(proof.instructions.length, 3)
     st.assert(verifyMultiproof(t.root, proof, [key1]))
     st.end()
   })

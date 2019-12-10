@@ -18,7 +18,6 @@ export enum Opcode {
   Hasher = 1,
   Leaf = 2,
   Extension = 3,
-  Add = 4,
 }
 
 export enum NodeType {
@@ -44,7 +43,7 @@ export interface StackItem {
   // For now keeping raw for re-constructuring trie
   raw: any
   pathIndices: number[]
-  // Buffer or raw (for embedded nodes), or sponge for branch
+  // Buffer or raw (for embedded nodes)
   hash: any
 }
 
@@ -75,37 +74,33 @@ export function verifyMultiproof(root: Buffer, proof: Multiproof, keys: Buffer[]
       // @ts-ignore
       paths[leafIdx - 1] = removeHexPrefix(stringToNibbles(l[0]))
     } else if (instr.kind === Opcode.Branch) {
-      const n = stack.pop()
-      if (!n) {
-        throw new Error('Stack underflow')
-      }
+      const branchIndices = instr.value as number[]
       const children = new Array(16).fill(null)
-      children[instr.value as number] = n
-
-      let nh = n.hash
-      if (n.kind === NodeType.Branch) {
-        nh = hashBranch(nh)
-      }
       const sponge = new Array(17).fill(Buffer.alloc(0))
-      sponge[instr.value as number] = nh
+      let pathIndices: number[] = []
+      for (const idx of branchIndices) {
+        const n = stack.pop()
+        if (!n) {
+          throw new Error('Stack underflow')
+        }
+        children[idx] = n
 
-      stack.push({ kind: NodeType.Branch, raw: children, pathIndices: n.pathIndices.slice(), hash: sponge })
-
-      for (let i = 0; i < n.pathIndices.length; i++) {
-        paths[n.pathIndices[i]] = [instr.value as number, ...paths[n.pathIndices[i]]]
+        sponge[idx] = n.hash
+        pathIndices = [...pathIndices, ...n.pathIndices]
+        for (const pi of n.pathIndices) {
+          paths[pi] = [idx, ...paths[pi]]
+        }
       }
+      const uniqPathIndices = Array.from(new Set(pathIndices))
+      const h = keccak256(encode(sponge))
+      stack.push({ kind: NodeType.Branch, raw: children, pathIndices: uniqPathIndices, hash: h })
     } else if (instr.kind === Opcode.Extension) {
       const n = stack.pop()
       if (!n) {
         throw new Error('Stack underflow')
       }
 
-      // Fetch child's hash from hashStack or compute if
-      // it's a branch
       let nh = n.hash
-      if (n.kind === NodeType.Branch) {
-        nh = hashBranch(nh)
-      }
       // Compute the extension node's hash and push to hashStack
       const raw = [nibblesToBuffer(addHexPrefix(instr.value as number[], false)), nh]
       const e = encode(raw)
@@ -116,30 +111,6 @@ export function verifyMultiproof(root: Buffer, proof: Multiproof, keys: Buffer[]
       for (let i = 0; i < n.pathIndices.length; i++) {
         paths[n.pathIndices[i]] = [...(instr.value as number[]), ...paths[n.pathIndices[i]]]
       }
-    } else if (instr.kind === Opcode.Add) {
-      const n1 = stack.pop()
-      const n2 = stack.pop()
-      if (!n1 || !n2) {
-        throw new Error('Stack underflow')
-      }
-      assert(n2.kind === NodeType.Branch, 'expected branch node on stack')
-      assert((instr.value as number) < 17)
-      n2.raw[instr.value as number] = n1
-      n2.pathIndices = Array.from(new Set([...n1.pathIndices, ...n2.pathIndices]))
-
-      let nh = n1.hash
-      if (n1.kind === NodeType.Branch) {
-        nh = hashBranch(nh)
-      }
-      const sponge = n2.hash
-      assert(Array.isArray(sponge))
-      sponge[instr.value as number] = nh
-      n2.hash = sponge
-      stack.push(n2)
-
-      for (let i = 0; i < n1.pathIndices.length; i++) {
-        paths[n1.pathIndices[i]] = [instr.value as number, ...paths[n1.pathIndices[i]]]
-      }
     } else {
       throw new Error('Invalid opcode')
     }
@@ -148,7 +119,7 @@ export function verifyMultiproof(root: Buffer, proof: Multiproof, keys: Buffer[]
   // Assuming sorted keys
   for (let i = 0; i < paths.length; i++) {
     const addr = nibblesToBuffer(paths[i])
-    assert(addr.equals(keys[i]))
+    assert(addr.equals(keys[i]), `expected ${keys[i].toString('hex')} == ${addr.toString('hex')}`)
   }
 
   const r = stack.pop()
@@ -216,10 +187,11 @@ async function _makeMultiproof(trie: any, rootHash: any, keys: number[][]): Prom
       table[idx].push(k.slice(1))
     }
 
-    let addBranchOp = true
+    let branchIndices = []
     for (let i = 0; i < 16; i++) {
       if (table[i] === undefined) {
-        // Empty subtree, hash it and add a HASHER op
+        // None of the target keys are in this subtree.
+        // If non-empty hash it and add a HASHER op.
         const child = root.getValue(i)
         if (child) {
           proof.instructions.push({ kind: Opcode.Hasher })
@@ -232,12 +204,7 @@ async function _makeMultiproof(trie: any, rootHash: any, keys: number[][]): Prom
           } else {
             throw new Error('Invalid branch child')
           }
-          if (addBranchOp) {
-            proof.instructions.push({ kind: Opcode.Branch, value: i })
-            addBranchOp = false
-          } else {
-            proof.instructions.push({ kind: Opcode.Add, value: i })
-          }
+          branchIndices.push(i)
         }
       } else {
         const child = root.getValue(i) as Buffer
@@ -249,15 +216,11 @@ async function _makeMultiproof(trie: any, rootHash: any, keys: number[][]): Prom
         proof.hashes.push(...p.hashes)
         proof.keyvals.push(...p.keyvals)
         proof.instructions.push(...p.instructions)
-
-        if (addBranchOp) {
-          proof.instructions.push({ kind: Opcode.Branch, value: i })
-          addBranchOp = false
-        } else {
-          proof.instructions.push({ kind: Opcode.Add, value: i })
-        }
+        branchIndices.push(i)
       }
     }
+    branchIndices.reverse()
+    proof.instructions.push({ kind: Opcode.Branch, value: branchIndices })
   } else if (root.type === 'extention') {
     const extkey = root.key
     // Make sure all keys follow the extension node
@@ -331,8 +294,10 @@ export function flatEncodeInstructions(instructions: Instruction[]): Buffer {
   const res: number[] = []
   for (const instr of instructions) {
     res.push(instr.kind)
-    if (instr.kind === Opcode.Branch || instr.kind === Opcode.Add) {
-      res.push(instr.value as number)
+    if (instr.kind === Opcode.Branch) {
+      const indices = instr.value as number[]
+      res.push(indices.length)
+      res.push(...indices)
     } else if (instr.kind === Opcode.Extension) {
       const nibbles = instr.value as number[]
       res.push(nibbles.length)
@@ -349,7 +314,12 @@ export function flatDecodeInstructions(raw: Buffer): Instruction[] {
     const op = raw[i++]
     switch (op) {
       case Opcode.Branch:
-        res.push({ kind: Opcode.Branch, value: raw[i++] })
+        const ilength = raw.readUInt8(i++)
+        const indices = []
+        for (let j = 0; j < ilength; j++) {
+          indices.push(raw[i++])
+        }
+        res.push({ kind: Opcode.Branch, value: indices })
         break
       case Opcode.Hasher:
         res.push({ kind: Opcode.Hasher })
@@ -358,15 +328,12 @@ export function flatDecodeInstructions(raw: Buffer): Instruction[] {
         res.push({ kind: Opcode.Leaf })
         break
       case Opcode.Extension:
-        const length = raw.readUInt8(i++)
+        const nlength = raw.readUInt8(i++)
         const nibbles = []
-        for (let j = 0; j < length; j++) {
+        for (let j = 0; j < nlength; j++) {
           nibbles.push(raw[i++])
         }
         res.push({ kind: Opcode.Extension, value: nibbles })
-        break
-      case Opcode.Add:
-        res.push({ kind: Opcode.Add, value: raw[i++] })
         break
     }
   }
@@ -378,7 +345,8 @@ export function decodeInstructions(instructions: Buffer[][]) {
   for (const op of instructions) {
     switch (bufToU8(op[0])) {
       case Opcode.Branch:
-        res.push({ kind: Opcode.Branch, value: bufToU8(op[1]) })
+        // @ts-ignore
+        res.push({ kind: Opcode.Branch, value: op[1].map(v => bufToU8(v)) })
         break
       case Opcode.Hasher:
         res.push({ kind: Opcode.Hasher })
@@ -389,9 +357,6 @@ export function decodeInstructions(instructions: Buffer[][]) {
       case Opcode.Extension:
         // @ts-ignore
         res.push({ kind: Opcode.Extension, value: op[1].map(v => bufToU8(v)) })
-        break
-      case Opcode.Add:
-        res.push({ kind: Opcode.Add, value: bufToU8(op[1]) })
         break
     }
   }
