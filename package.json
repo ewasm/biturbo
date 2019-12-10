@@ -7,7 +7,7 @@
     "token": "npm run token:relayer && npm run token:build && npm run token:run",
     "token:relayer": "ts-node src/relayer/bin.ts",
     "token:build": "gulp token",
-    "token:run": "scout.ts turboproof.yaml",
+    "token:run": "scout.ts turbo-token.yaml",
     "evm": "npm run evm:relayer && npm run evm:build && npm run evm:run",
     "evm:relayer": "ts-node src/relayer/bin.ts --stateTest add11",
     "evm:build": "gulp evm",
