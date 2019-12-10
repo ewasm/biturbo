@@ -19,5 +19,8 @@
            name: Run tests
            command: npm test
        - run:
-           name: Run ee with generated input
-           command: npm run relayer && npm run ee
+           name: Run token ee with generated input
+           command: npm run token
+       #- run:
+       #    name: Run EVM ee with generated input
+       #    command: npm run evm
