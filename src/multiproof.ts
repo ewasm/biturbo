@@ -62,7 +62,12 @@ export function verifyMultiproof(root: Buffer, proof: Multiproof, keys: Buffer[]
       if (!h) {
         throw new Error('Not enough hashes in multiproof')
       }
-      stack.push({ kind: NodeType.Hash, raw: [h], pathIndices: [], hash: h.length < 32 ? decode(h) : h })
+      stack.push({
+        kind: NodeType.Hash,
+        raw: [h],
+        pathIndices: [],
+        hash: h.length < 32 ? decode(h) : h,
+      })
     } else if (instr.kind === Opcode.Leaf) {
       const l = leaves[leafIdx++]
       if (!l) {
@@ -70,7 +75,12 @@ export function verifyMultiproof(root: Buffer, proof: Multiproof, keys: Buffer[]
       }
       const raw = [l[0], l[1]]
       const e = encode(raw)
-      stack.push({ kind: NodeType.Leaf, raw: [l[0], l[1]], pathIndices: [leafIdx - 1], hash: e.length >= 32 ? keccak256(e) : raw })
+      stack.push({
+        kind: NodeType.Leaf,
+        raw: [l[0], l[1]],
+        pathIndices: [leafIdx - 1],
+        hash: e.length >= 32 ? keccak256(e) : raw,
+      })
       // @ts-ignore
       paths[leafIdx - 1] = removeHexPrefix(stringToNibbles(l[0]))
     } else if (instr.kind === Opcode.Branch) {
@@ -106,7 +116,12 @@ export function verifyMultiproof(root: Buffer, proof: Multiproof, keys: Buffer[]
       const e = encode(raw)
       const h = e.length >= 32 ? keccak256(e) : raw
 
-      stack.push({ kind: NodeType.Extension, raw: [instr.value, n], pathIndices: n.pathIndices.slice(), hash: h })
+      stack.push({
+        kind: NodeType.Extension,
+        raw: [instr.value, n],
+        pathIndices: n.pathIndices.slice(),
+        hash: h,
+      })
 
       for (let i = 0; i < n.pathIndices.length; i++) {
         paths[n.pathIndices[i]] = [...(instr.value as number[]), ...paths[n.pathIndices[i]]]
@@ -212,7 +227,7 @@ async function _makeMultiproof(trie: any, rootHash: any, keys: number[][]): Prom
           throw new Error('Key not in trie')
         }
         const p = await _makeMultiproof(trie, child, table[i])
-        
+
         proof.hashes.push(...p.hashes)
         proof.keyvals.push(...p.keyvals)
         proof.instructions.push(...p.instructions)
