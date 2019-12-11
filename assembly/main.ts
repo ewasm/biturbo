@@ -50,7 +50,7 @@ export enum NodeType {
 }
 
 // for Map<UintArray,Node> binaryen toText generates function names with commas, which wabt doesn't like.
-var Trie = new Map<usize, Node>()
+let Trie = new Map<usize, Node>()
 
 class Node {
   constructor(
@@ -76,7 +76,7 @@ export function main(): void {
 
   let postStateRoot = processBlock(preStateRoot, blockData)
 
-  eth2_savePostStateRoot((postStateRoot.buffer as usize) + postStateRoot.byteOffset)
+  eth2_savePostStateRoot(postStateRoot.dataStart as usize)
 }
 
 export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): Uint8Array {
@@ -118,12 +118,12 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
     let fromAccountRaw = accounts[fromIdx].buffer
     // If `from` has been modified by previous txes
     // load the updated one.
-    if (updatedAccounts[fromIdx] != null) {
+    if (updatedAccounts[fromIdx] !== null) {
       fromAccountRaw = updatedAccounts[fromIdx] as Uint8Array
     }
 
     let toAccountRaw = accounts[toIdx].buffer
-    if (updatedAccounts[toIdx] != null) {
+    if (updatedAccounts[toIdx] !== null) {
       toAccountRaw = updatedAccounts[toIdx] as Uint8Array
     }
 
@@ -163,7 +163,10 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
       stripBuf(Uint8Array.wrap(newFromNonce)),
       stripBuf(Uint8Array.wrap(newFromBalance)),
     )
-    let newToAccount = encodeAccount(toAccount[0], stripBuf(Uint8Array.wrap(newToBalance)))
+    let newToAccount = encodeAccount(
+      toAccount[0],
+      stripBuf(Uint8Array.wrap(newToBalance)),
+    )
 
     updatedAccounts[fromIdx] = newFromAccount
     updatedAccounts[toIdx] = newToAccount
@@ -175,9 +178,10 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
     }
   }
 
-  let keys = Array.create<Uint8Array>(addrs.length)
-  for (let i = 0; i < addrs.length; i++) {
-    keys.push(hash(addrs[i].buffer))
+  let addrsLen = addrs.length;
+  let keys = new Array<Uint8Array>(addrsLen)
+  for (let i = 0; i < addrsLen; i++) {
+    keys[i] = hash(addrs[i].buffer)
   }
 
   let postStateRoot = verifyMultiproofAndUpdate(
@@ -249,25 +253,27 @@ function verifyMultiproofAndUpdate(
   let pc = 0
   let hashIdx = 0
   let leafIdx = 0
-  let stack = Array.create<StackItem>(100)
+  let stack = new Array<StackItem>(100)
   let stackTop = 0
 
-  let paths = Array.create<Array<u8>>(leafKeys.length)
-  for (let i = 0; i < leafKeys.length; i++) {
+  let leafKeysLen = leafKeys.length;
+  let paths = new Array<Array<u8>>(leafKeysLen)
+  for (let i = 0; i < leafKeysLen; i++) {
     paths[i] = new Array<u8>()
   }
 
   while (pc < instructions.length) {
     let op = instructions[pc++]
     switch (op) {
-      case Opcode.Hasher:
+      case Opcode.Hasher: {
         if (hashIdx >= hashes.length) {
           throw new Error('Not enough hashes in multiproof')
         }
         let h = hashes[hashIdx++].buffer
         stack[stackTop++] = new StackItem(NodeType.Hash, [], h, h)
         break
-      case Opcode.Leaf:
+      }
+      case Opcode.Leaf: {
         if (leafIdx >= leafKeys.length) {
           throw new Error('Not enough leaves in multiproof')
         }
@@ -281,10 +287,11 @@ function verifyMultiproofAndUpdate(
         let nh = hash(ul)
         stack[stackTop++] = new StackItem(NodeType.Leaf, [leafIdx - 1], h, nh)
         break
-      case Opcode.Branch:
-        let indicesLen = instructions[pc++]
-        let branchIndices = Array.create<u8>(indicesLen)
-        for (let i = 0; i < (indicesLen as i32); i++) {
+      }
+      case Opcode.Branch: {
+        let indicesLen = instructions[pc++] as i32
+        let branchIndices = new Array<u8>(indicesLen)
+        for (let i = 0; i < indicesLen; i++) {
           branchIndices[i] = instructions[pc + i]
         }
         pc += indicesLen
@@ -299,9 +306,10 @@ function verifyMultiproofAndUpdate(
           children[idx] = n.hash
           newChildren[idx] = n.newHash
 
-          pathIndices = pathIndices.concat(n.pathIndices)
-          for (let i = 0; i < n.pathIndices.length; i++) {
-            paths[n.pathIndices[i]].unshift(idx)
+          let nPathIndices = n.pathIndices;
+          pathIndices = pathIndices.concat(nPathIndices)
+          for (let i = 0, len = nPathIndices.length; i < len; i++) {
+            paths[nPathIndices[i]].unshift(idx)
           }
         }
         let h = hashBranch(children)
@@ -309,10 +317,11 @@ function verifyMultiproofAndUpdate(
 
         stack[stackTop++] = new StackItem(NodeType.Branch, pathIndices, h, nh)
         break
-      case Opcode.Extension:
-        let nibblesLen = instructions[pc++]
-        let nibbles = Array.create<u8>(nibblesLen)
-        for (let i = 0; i < (nibblesLen as i32); i++) {
+      }
+      case Opcode.Extension: {
+        let nibblesLen = instructions[pc++] as i32
+        let nibbles = new Array<u8>(nibblesLen)
+        for (let i = 0; i < nibblesLen; i++) {
           nibbles[i] = instructions[pc + i]
         }
         pc += nibblesLen
@@ -322,26 +331,29 @@ function verifyMultiproofAndUpdate(
         nibbles = removeHexPrefix(nibbles)
 
         let n = stack[--stackTop]
-        let h = hashExtension(key, n.hash as Uint8Array)
-        let nh = hashExtension(key, n.newHash as Uint8Array)
+        let h = hashExtension(key, n.hash!)
+        let nh = hashExtension(key, n.newHash!)
 
         stack[stackTop++] = new StackItem(NodeType.Extension, n.pathIndices.slice(0), h, nh)
-        for (let i = 0; i < n.pathIndices.length; i++) {
-          paths[n.pathIndices[i]] = nibbles.concat(paths[n.pathIndices[i]])
+        let nPathIndices = n.pathIndices;
+        for (let i = 0, len = nPathIndices.length; i < len; i++) {
+          let pathIndex = nPathIndices[i]
+          paths[pathIndex] = nibbles.concat(paths[pathIndex])
         }
         break
+      }
     }
   }
   let r = stack[stackTop - 1]
-  let rootHash = r.hash as Uint8Array
-  let newRootHash = r.newHash as Uint8Array
+  let rootHash = r.hash!
+  let newRootHash = r.newHash!
 
   if (cmpBuf(rootHash, preStateRoot) != 0) {
     throw new Error('invalid root hash')
   }
 
   // Verify given keys match computed paths
-  for (let i = 0; i < paths.length; i++) {
+  for (let i = 0, len = paths.length; i < len; i++) {
     let path = nibbleArrToUintArr(paths[i])
     if (cmpBuf(path, keys[i]) != 0) {
       throw new Error('invalid key')
@@ -373,10 +385,11 @@ function insertNewLeafNewBranch(
   // current_node.bodyrlp
 
   // pathStack could be smaller than 40
-  let pathStack = Array.create<usize>(40)
+  const pathStackSize = 40;
+  let pathStack = new Array<usize>(pathStackSize)
   pathStack.push(prestate_root_hash_ptr)
 
-  for (let k_i = 0; k_i < 40; k_i++) {
+  for (let k_i = 0; k_i < pathStackSize; k_i++) {
     let branch_index_i = new_leaf_key_nibbles[k_i]
 
     if (currentNode.type == NodeType.Leaf) {
@@ -389,8 +402,8 @@ function insertNewLeafNewBranch(
       )
       return
     } else if (currentNode.type == NodeType.Branch) {
-      if (currentNode.branchBody.dirty == null) {
-        currentNode.branchBody.dirty = Array.create<u8>(16)
+      if (currentNode.branchBody!.dirty === null) {
+        currentNode.branchBody!.dirty = new Array<u8>(16)
 
         // setting the dirty flag to an empty array indicates that no children are dity but the branch node itself needs to be rehashed
         // explanation:
@@ -419,7 +432,7 @@ function insertNewLeafNewBranch(
       // TODO: we already check this types ni the for loop.. merge the logic?
       if (nextNodeInPath.type == NodeType.Branch) {
         // keep walking...
-        currentNode.branchBody.dirty.push(branch_index_i)
+        currentNode.branchBody!.dirty.push(branch_index_i)
         currentNode = nextNodeInPath
       } else if (nextNodeInPath.type == NodeType.Leaf) {
         // next node is a leaf, and so is last node in the path
@@ -464,10 +477,10 @@ function createNewBranchWhereLeafExists(
     addHexPrefix(new_key_for_existing_leaf_nibbles, true),
   )
 
-  let new_node_for_existing_leaf_rlp_children = Array.create<RLPData>(2)
+  let new_node_for_existing_leaf_rlp_children = new Array<RLPData>(2)
 
-  new_node_for_existing_leaf_rlp_children.push(new RLPData(null, Array.create<RLPData>(0)))
-  new_node_for_existing_leaf_rlp_children.push(new RLPData(null, Array.create<RLPData>(0)))
+  new_node_for_existing_leaf_rlp_children.push(new RLPData(null, new Array<RLPData>()))
+  new_node_for_existing_leaf_rlp_children.push(new RLPData(null, new Array<RLPData>()))
   new_node_for_existing_leaf_rlp_children[0].buffer = new_key_for_existing_leaf
   new_node_for_existing_leaf_rlp_children[1].buffer = existing_leaf_value
   let new_node_for_existing_leaf_rlp = new RLPData(null, new_node_for_existing_leaf_rlp_children)
@@ -478,7 +491,7 @@ function createNewBranchWhereLeafExists(
 
   ethash_keccak256(
     new_hash_for_existing_leaf_ptr,
-    (new_node_for_existing_leaf.buffer as usize) + new_node_for_existing_leaf.byteOffset,
+    new_node_for_existing_leaf.dataStart as usize,
     new_node_for_existing_leaf.byteLength,
   )
   //debug_mem(new_hash_for_existing_leaf_ptr, 32);
@@ -491,10 +504,10 @@ function createNewBranchWhereLeafExists(
   let branch_index_for_new_leaf = new_key_nibbles[k_i]
   let key_for_new_leaf = nibbleArrToUintArr(addHexPrefix(new_key_nibbles.slice(k_i + 1), true))
 
-  let node_for_new_leaf_rlp_children = Array.create<RLPData>(2)
+  let node_for_new_leaf_rlp_children = new Array<RLPData>(2)
 
-  node_for_new_leaf_rlp_children.push(new RLPData(null, Array.create<RLPData>(0)))
-  node_for_new_leaf_rlp_children.push(new RLPData(null, Array.create<RLPData>(0)))
+  node_for_new_leaf_rlp_children.push(new RLPData(null, new Array<RLPData>()))
+  node_for_new_leaf_rlp_children.push(new RLPData(null, new Array<RLPData>()))
   node_for_new_leaf_rlp_children[0].buffer = key_for_new_leaf
   node_for_new_leaf_rlp_children[1].buffer = new_leaf_account_rlp
   let node_for_new_leaf_rlp = new RLPData(null, node_for_new_leaf_rlp_children)
@@ -505,7 +518,7 @@ function createNewBranchWhereLeafExists(
 
   ethash_keccak256(
     hash_for_new_leaf_ptr,
-    (node_for_new_leaf.buffer as usize) + node_for_new_leaf.byteOffset,
+    node_for_new_leaf.dataStart as usize,
     node_for_new_leaf.byteLength,
   )
   //debug_mem(hash_for_new_leaf_ptr, 32);
@@ -534,7 +547,7 @@ function createNewBranchWhereLeafExists(
 
   let new_branch_node_parent_index = new_key_nibbles[k_i - 1]
 
-  parentBranchNode.branchBody.children[new_branch_node_parent_index] = new_branch_hash_ptr
+  parentBranchNode.branchBody!.children[new_branch_node_parent_index] = new_branch_hash_ptr
   //Trie.set(parent_branch_hash_ptr, parentBranchNode);
   // TODO: do we need to reset it with Trie.set?
 
@@ -553,14 +566,14 @@ function rehashNode(staleHashPtr: usize): usize {
 
   if (node_with_stale_hash.type == NodeType.Branch) {
     // recurse on dirty children
-    let dirty_indexes = node_with_stale_hash.branchBody.dirty
+    let dirty_indexes = node_with_stale_hash.branchBody!.dirty
     if (dirty_indexes == null) {
       throw new Error('ERROR: called rehash on a branch node that has no dirty flag')
     }
 
     for (let i = 0; i < dirty_indexes.length; i++) {
       let dirty_i = dirty_indexes[i]
-      let stale_hash_for_dirty_child_ptr = node_with_stale_hash.branchBody.children[dirty_i]
+      let stale_hash_for_dirty_child_ptr = node_with_stale_hash.branchBody!.children[dirty_i]
       let new_hash_for_dirty_child_ptr = rehashNode(stale_hash_for_dirty_child_ptr)
       node_with_stale_hash.branchBody.children[dirty_i] = new_hash_for_dirty_child_ptr
     }
@@ -574,7 +587,7 @@ function rehashNode(staleHashPtr: usize): usize {
     // all child hashes have been updated, so clear the dirty flag
     //node_with_stale_hash.dirty = null
 
-    let new_branch_hash_ptr = hashBranchNode(node_with_stale_hash.branchBody.children)
+    let new_branch_hash_ptr = hashBranchNode(node_with_stale_hash.branchBody!.children)
 
     Trie.set(new_branch_hash_ptr, node_with_stale_hash)
     return new_branch_hash_ptr
@@ -585,8 +598,7 @@ function rehashNode(staleHashPtr: usize): usize {
 }
 
 function isContract(account: Array<Uint8Array>): bool {
-  let emptyBuf = Array.create<u8>(32)
-  emptyBuf = [
+  let emptyBuf: u8[] = [
     197,
     210,
     70,
@@ -637,8 +649,8 @@ function getCode(
   let codeHash = account[3]
   let index = -1
 
-  for (let i = 0; i < codeHashes.length; i++) {
-    if (cmpBuf(codeHash, codeHashes[i].buffer) === 0) {
+  for (let i = 0, len = codeHashes.length; i < len; i++) {
+    if (cmpBuf(codeHash, unchecked(codeHashes[i]).buffer) === 0) {
       index = i
       break
     }

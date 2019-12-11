@@ -81,28 +81,30 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
   let input_decoded = decode(blockData)
   // input_decoded is type RLPData: { buffer: Uint8Array, children: RLPData[] }
   // [txes, addrs, hashes, leaves, instructions]
-  let hash1 = input_decoded.children[2].children[0].buffer
+  let inputChildren = input_decoded.children;
+  // let hash1 = inputChildren[2].children[0].buffer
 
-  let txes = input_decoded.children[0].children
-  let addrs = input_decoded.children[1].children
-  let hashes = input_decoded.children[2].children
-  let leafKeys = input_decoded.children[3].children
-  let accounts = input_decoded.children[4].children
+  let txes = inputChildren[0].children
+  let addrs = inputChildren[1].children
+  let hashes = inputChildren[2].children
+  let leafKeys = inputChildren[3].children
+  let accounts = inputChildren[4].children
   // Instructions are flat-encoded
-  let instructions = input_decoded.children[5].buffer
+  let instructions = inputChildren[5].buffer
 
   if (addrs.length !== leafKeys.length || addrs.length !== accounts.length) {
     throw new Error('invalid multiproof')
   }
   let updatedAccounts = new Array<Uint8Array | null>(accounts.length)
 
-  for (let i = 0; i < txes.length; i++) {
+  for (let i = 0, len = txes.length; i < len; i++) {
     let tx = txes[i]
+    let txChildren = tx.children;
     // [toIdx, value, nonce, fromIdx]
-    let toIdx = parseU8(tx.children[0].buffer)
-    let fromIdx = parseU8(tx.children[3].buffer)
-    let value = tx.children[1].buffer
-    let nonce = tx.children[2].buffer
+    let toIdx = parseU8(txChildren[0].buffer)
+    let fromIdx = parseU8(txChildren[3].buffer)
+    let value = txChildren[1].buffer
+    let nonce = txChildren[2].buffer
 
     // TODO: Hash unsigned tx, recover from address, check against fromIdx
 
@@ -158,9 +160,10 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
     updatedAccounts[toIdx] = newToAccount
   }
 
-  let keys = Array.create<Uint8Array>(addrs.length)
-  for (let i = 0; i < addrs.length; i++) {
-    keys.push(hash(addrs[i].buffer))
+  let addrsLen = addrs.length;
+  let keys = new Array<Uint8Array>(addrsLen)
+  for (let i = 0; i < addrsLen; i++) {
+    keys[i] = hash(addrs[i].buffer)
   }
 
   let postStateRoot = verifyMultiproofAndUpdate(
@@ -232,25 +235,27 @@ function verifyMultiproofAndUpdate(
   let pc = 0
   let hashIdx = 0
   let leafIdx = 0
-  let stack = Array.create<StackItem>(100)
+  let stack = new Array<StackItem>(100)
   let stackTop = 0
 
-  let paths = Array.create<Array<u8>>(leafKeys.length)
-  for (let i = 0; i < leafKeys.length; i++) {
+  let leafKeysLen = leafKeys.length;
+  let paths = new Array<Array<u8>>(leafKeysLen)
+  for (let i = 0; i < leafKeysLen; i++) {
     paths[i] = new Array<u8>()
   }
 
   while (pc < instructions.length) {
     let op = instructions[pc++]
     switch (op) {
-      case Opcode.Hasher:
+      case Opcode.Hasher: {
         if (hashIdx >= hashes.length) {
           throw new Error('Not enough hashes in multiproof')
         }
         let h = hashes[hashIdx++].buffer
         stack[stackTop++] = new StackItem(NodeType.Hash, [], h, h)
         break
-      case Opcode.Leaf:
+      }
+      case Opcode.Leaf: {
         if (leafIdx >= leafKeys.length) {
           throw new Error('Not enough leaves in multiproof')
         }
@@ -264,9 +269,10 @@ function verifyMultiproofAndUpdate(
         let nh = hash(ul)
         stack[stackTop++] = new StackItem(NodeType.Leaf, [leafIdx - 1], h, nh)
         break
-      case Opcode.Branch:
+      }
+      case Opcode.Branch: {
         let indicesLen = instructions[pc++]
-        let branchIndices = Array.create<u8>(indicesLen)
+        let branchIndices = new Array<u8>(indicesLen)
         for (let i = 0; i < (indicesLen as i32); i++) {
           branchIndices[i] = instructions[pc + i]
         }
@@ -292,9 +298,10 @@ function verifyMultiproofAndUpdate(
 
         stack[stackTop++] = new StackItem(NodeType.Branch, pathIndices, h, nh)
         break
+      }
       case Opcode.Extension:
         let nibblesLen = instructions[pc++]
-        let nibbles = Array.create<u8>(nibblesLen)
+        let nibbles = new Array<u8>(nibblesLen)
         for (let i = 0; i < (nibblesLen as i32); i++) {
           nibbles[i] = instructions[pc + i]
         }
