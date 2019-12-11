@@ -24,8 +24,8 @@ async function main() {
       value: 0
     }
 
-    await testing.getTestsFromArgs('GeneralStateTests', async (filename: any, testName: any, test: any) => {
-      const testSuite =  await stateTestRunner(runnerArgs, test, testName)
+    await testing.getTestsFromArgs('GeneralStateTests', async (_filename: any, _testName: any, test: any) => {
+      const testSuite =  await stateTestRunner(runnerArgs, test)
       writeScoutConfig(testSuite, testCase + '.yaml', 'build/evm_with_keccak.wasm')
     }, testGetterArgs).then( () => {
     }).catch((err: any) => {
