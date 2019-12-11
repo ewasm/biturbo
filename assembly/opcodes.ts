@@ -1,4 +1,3 @@
-
 export enum Opcodes {
   Stop = 0x00,
   Add = 0x01,

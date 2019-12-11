@@ -18,23 +18,22 @@ export interface TestSuite {
 }
 
 export interface RunnerArgs {
-  stateless: boolean,
-  fork: string,
-  test: string,
-  scout: string,
-  dist: string,
-  forkConfig: string,
-  jsontrace: boolean,
-  debug: boolean,
-  data: string,
-  gasLimit: number,
+  stateless: boolean
+  fork: string
+  test: string
+  scout: string
+  dist: string
+  forkConfig: string
+  jsontrace: boolean
+  debug: boolean
+  data: string
+  gasLimit: number
   value: number
 }
 
 export interface TestGetterArgs {
   test: string
 }
-
 
 interface SimulationData {
   from: Buffer
@@ -193,13 +192,19 @@ async function generateAccounts(trie: any, count = 500): Promise<AccountInfo[]> 
 
 export async function stateTestRunner(runnerArgs: RunnerArgs, test: any): Promise<TestSuite> {
   const trie = new Trie()
-  
+
   const [accounts, codeHashes, bytecode] = await getTestsAccounts(trie, test)
 
   const preStateRoot = trie.root
   const [txes, addrs, multiproof, simulationData, pks] = await getTestsTxes(trie, accounts, test)
 
-  const blockData = encode([txes, addrs, ...rawMultiproof(multiproof as Multiproof, true), codeHashes, bytecode])
+  const blockData = encode([
+    txes,
+    addrs,
+    ...rawMultiproof(multiproof as Multiproof, true),
+    codeHashes,
+    bytecode,
+  ])
 
   // Execute txes on top of trie to compute post state root
   let i = 0
@@ -243,15 +248,10 @@ async function getTestsTxes(trie: any, accounts: AccountInfo[], test: any) {
   if (!toProve[toKey]) {
     toProve[toKey] = []
   }
-  
+
   toProve[toKey].push({ txId: 0, fieldIdx: 0 })
 
-  txes.push([
-    to,
-    stripZeros(value.toBuffer('be', 32)),
-    stripZeros(nonce.toBuffer('be', 32)),
-    from,
-  ])
+  txes.push([to, stripZeros(value.toBuffer('be', 32)), stripZeros(nonce.toBuffer('be', 32)), from])
 
   pks.push(accounts[1].privateKey)
 
@@ -259,14 +259,14 @@ async function getTestsTxes(trie: any, accounts: AccountInfo[], test: any) {
   const unsortedAddrs = Object.keys(toProve).map(s => Buffer.from(s, 'hex'))
   const keys = unsortedAddrs.map(a => keccak256(a))
   keys.sort(Buffer.compare)
-  
+
   // Sort addresses based on their hashes.
   // Naive algorithm
   const sortedAddrs = new Array(keys.length).fill(undefined)
   for (const a of unsortedAddrs) {
     let idx = -1
     const h = keccak256(a)
-    
+
     for (let i = 0; i < keys.length; i++) {
       const k = keys[i]
       if (h.equals(k)) {
@@ -278,7 +278,7 @@ async function getTestsTxes(trie: any, accounts: AccountInfo[], test: any) {
   }
 
   const proof = await makeMultiproof(trie, keys)
-  
+
   // Verify proof is valid
   assert(verifyMultiproof(root, proof, keys))
 
@@ -298,25 +298,25 @@ async function getTestsTxes(trie: any, accounts: AccountInfo[], test: any) {
 async function execute(options: any, trie: any, tx: SimulationData, pk: any) {
   const rawTx = {
     nonce: '0x' + tx.nonce.toString('hex'),
-    gasLimit: "0x61a80",
-    gasPrice: "0x1",
+    gasLimit: '0x61a80',
+    gasPrice: '0x1',
     value: '0x' + tx.value.toString('hex'),
     from: '0x' + tx.from.toString('hex'),
-    to: '0x'+ tx.to.toString('hex'),
+    to: '0x' + tx.to.toString('hex'),
   }
 
   const vm = new VM({
     state: trie,
-    hardfork: options.forkConfig.toLowerCase()
+    hardfork: options.forkConfig.toLowerCase(),
   })
-  
+
   await runTx(vm, rawTx, pk)
 }
 
 async function runTx(vm: any, rawTx: any, pk: any) {
   const tx = new Transaction(rawTx)
   tx.sign(pk)
-  
+
   const results = await vm.runTx({
     tx: tx,
   })
@@ -324,12 +324,14 @@ async function runTx(vm: any, rawTx: any, pk: any) {
   return results
 }
 
-async function getTestsAccounts(trie: any, test: any): Promise<[AccountInfo[], Buffer[], Buffer[]]> {
+async function getTestsAccounts(
+  trie: any,
+  test: any,
+): Promise<[AccountInfo[], Buffer[], Buffer[]]> {
   const accounts: AccountInfo[] = []
   const codeHashes: Buffer[] = []
   const bytecode: Buffer[] = []
   const privateKey = test.transaction.secretKey
-
 
   for (const address in test.pre) {
     const acct = test.pre[address]
@@ -339,9 +341,9 @@ async function getTestsAccounts(trie: any, test: any): Promise<[AccountInfo[], B
     const acct_data = {
       nonce: acct.nonce,
       balance: acct.balance,
-      codeHash: codeHash
+      codeHash: codeHash,
     }
-    
+
     const account = new Account(acct_data)
 
     const addr_buf = Buffer.from(address.substring(2), 'hex')
@@ -352,7 +354,7 @@ async function getTestsAccounts(trie: any, test: any): Promise<[AccountInfo[], B
     })
 
     await putAccount(trie, addr_buf, account)
-    
+
     await new Promise((resolve, reject) => {
       account.setCode(trie, code, (err: any, codeHash: Buffer) => {
         if (err) {

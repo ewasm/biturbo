@@ -7,7 +7,7 @@ const testing = require('ethereumjs-testing')
 async function main() {
   const args = process.argv
 
-  if ((args.length === 4) && (args[2] == '--stateTest')) {
+  if (args.length === 4 && args[2] == '--stateTest') {
     const testCase = args[3]
     const testGetterArgs: TestGetterArgs = { test: testCase }
     const runnerArgs: RunnerArgs = {
@@ -21,21 +21,26 @@ async function main() {
       debug: false,
       data: '',
       gasLimit: 0,
-      value: 0
+      value: 0,
     }
 
-    await testing.getTestsFromArgs('GeneralStateTests', async (_filename: any, _testName: any, test: any) => {
-      const testSuite =  await stateTestRunner(runnerArgs, test)
-      writeScoutConfig(testSuite, testCase + '.yaml', 'build/evm_with_keccak.wasm')
-    }, testGetterArgs).then( () => {
-    }).catch((err: any) => {
-      console.log('Err: ', err)
-    })
+    await testing
+      .getTestsFromArgs(
+        'GeneralStateTests',
+        async (_filename: any, _testName: any, test: any) => {
+          const testSuite = await stateTestRunner(runnerArgs, test)
+          writeScoutConfig(testSuite, testCase + '.yaml', 'build/evm_with_keccak.wasm')
+        },
+        testGetterArgs,
+      )
+      .then(() => {})
+      .catch((err: any) => {
+        console.log('Err: ', err)
+      })
   } else {
     const testSuite = await generateTestSuite()
     writeScoutConfig(testSuite, 'turbo-token.yaml', 'build/token_with_keccak.wasm')
   }
-
 }
 
 function writeScoutConfig(data: TestSuite, outPath: string, wasmPath: string) {
