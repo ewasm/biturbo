@@ -2,6 +2,7 @@ import { ethash_keccak256 } from './keccak'
 
 @inline
 export function parseU8(buf: Uint8Array): u8 {
+  // @ts-ignore
   return buf.length ? load<u8>(buf.dataStart as usize) : 0;
 }
 
@@ -22,6 +23,7 @@ export function padBuf(buf: Uint8Array, length: usize): Uint8Array {
     return buf
   }
   let res = new ArrayBuffer(length)
+  // @ts-ignore
   memory.copy((res as usize) + diff, buf.dataStart as usize, buf.length)
   return Uint8Array.wrap(res, 0, length)
 }
@@ -60,6 +62,7 @@ export function stripBuf(buf: Uint8Array): Uint8Array {
 @inline
 export function hash(buf: Uint8Array): Uint8Array {
   let hashBuf = new ArrayBuffer(32)
+  // @ts-ignore
   ethash_keccak256(hashBuf as usize, buf.dataStart as usize, buf.byteLength)
   return Uint8Array.wrap(hashBuf)
 }
@@ -91,9 +94,9 @@ export function addHexPrefix(key_nib_arr: Array<u8>, terminator: bool): Array<u8
 }
 
 export function u8ArrToNibbleArr(u8_arr: Array<u8>): Array<u8> {
-  var len = u8_arr.length
+  let len = u8_arr.length
 
-  var nib_arr = new Array<u8>(len * 2) // length is num of hex chars for address_hash
+  let nib_arr = new Array<u8>(len * 2) // length is num of hex chars for address_hash
   // TODO: we might not need to convert the whole thing to nibbles, just enough chars to follow the path to the proof
 
   let q = 0
