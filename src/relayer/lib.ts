@@ -348,12 +348,12 @@ async function getTestsAccounts(trie: any, test: any): Promise<[AccountInfo[], B
   const privateKey = test.transaction.secretKey
 
 
-  for (var address in test.pre) {
-    let acct = test.pre[address]
+  for (let address in test.pre) {
+    const acct = test.pre[address]
     const code = Buffer.from(acct.code.substring(2), 'hex')
     const codeHash = keccak256(code)
 
-    let acct_data = {
+    const acct_data = {
       nonce: acct.nonce,
       balance: acct.balance,
       codeHash: codeHash
@@ -361,7 +361,7 @@ async function getTestsAccounts(trie: any, test: any): Promise<[AccountInfo[], B
     
     const account = new Account(acct_data)
 
-    let addr_buf = Buffer.from(address.substring(2), 'hex')
+    const addr_buf = Buffer.from(address.substring(2), 'hex')
     accounts.push({
       address: addr_buf,
       privateKey: Buffer.from(privateKey.substring(2), 'hex'),
@@ -400,8 +400,8 @@ async function getAccount(trie: any, address: Buffer): Promise<Account> {
 }
 
 function rawMultiproof(proof: Multiproof, flatInstructions: boolean = false): any {
-  let keys = []
-  let values = []
+  const keys = []
+  const values = []
   for (const kv of proof.keyvals) {
     const raw = decode(kv)
     keys.push(raw[0])

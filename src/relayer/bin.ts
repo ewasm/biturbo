@@ -9,8 +9,8 @@ async function main() {
 
   if ((args.length === 4) && (args[2] == '--stateTest')) {
     const testCase = args[3]
-    let testGetterArgs: TestGetterArgs = { test: testCase }
-    let runnerArgs: RunnerArgs = {
+    const testGetterArgs: TestGetterArgs = { test: testCase }
+    const runnerArgs: RunnerArgs = {
       stateless: true,
       fork: 'Petersburg',
       test: testCase,
