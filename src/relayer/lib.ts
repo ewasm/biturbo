@@ -414,7 +414,7 @@ export function getBasicBlockIndices(code: Buffer): number[][] {
 
   const blocks = [[0, -1]]
   for (let i = 0; i < code.length; i++) {
-    let op = getOp(i)
+    const op = getOp(i)
     // Skip push args
     if (op === 'PUSH') {
       i += code[i] - 0x5f
