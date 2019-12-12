@@ -6,7 +6,6 @@
     "build": "gulp"
   },
   "devDependencies": {
-    "assemblyscript": "^0.8.1",
     "gulp": "^4",
     "wabt": "1.0.11"
   }
