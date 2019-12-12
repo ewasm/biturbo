@@ -133,11 +133,7 @@ export function encodeAccount(nonce: Uint8Array, balance: Uint8Array): Uint8Arra
     buf[offset++] = nonce[0]
   } else {
     buf[offset++] = (0x80 + nonce.length) as u8
-    memory.copy(
-      buf.dataStart as usize + offset,
-      nonce.dataStart as usize,
-      nonce.length,
-    )
+    memory.copy((buf.dataStart as usize) + offset, nonce.dataStart as usize, nonce.length)
     offset += nonce.length
   }
 
@@ -147,11 +143,7 @@ export function encodeAccount(nonce: Uint8Array, balance: Uint8Array): Uint8Arra
     buf[offset++] = balance[0]
   } else {
     buf[offset++] = (0x80 + balance.length) as u8
-    memory.copy(
-      buf.dataStart as usize + offset,
-      balance.dataStart as usize,
-      balance.length,
-    )
+    memory.copy((buf.dataStart as usize) + offset, balance.dataStart as usize, balance.length)
     offset += balance.length
   }
 
@@ -159,12 +151,12 @@ export function encodeAccount(nonce: Uint8Array, balance: Uint8Array): Uint8Arra
   // to the backing buffer. See the memory layout of arrays for more info.
   let defaultStateRootPtr = load<usize>(defaultStateRoot as usize)
   buf[offset++] = 0xa0 // 0x80 + 0x20
-  memory.copy(buf.dataStart as usize + offset, defaultStateRootPtr, 32)
+  memory.copy((buf.dataStart as usize) + offset, defaultStateRootPtr, 32)
   offset += 32
 
   let defaultCodeHashPtr = load<usize>(defaultCodeHash as usize)
   buf[offset++] = 0xa0
-  memory.copy(buf.dataStart as usize + offset, defaultCodeHashPtr, 32)
+  memory.copy((buf.dataStart as usize) + offset, defaultCodeHashPtr, 32)
 
   return buf
 }
@@ -188,22 +180,14 @@ export function encodeLeaf(key: Uint8Array, value: Uint8Array): Uint8Array {
     buf[offset++] = key[0]
   } else {
     buf[offset++] = 0x80 + key.length
-    memory.copy(
-      buf.dataStart as usize + offset,
-      key.dataStart as usize,
-      key.length,
-    )
+    memory.copy((buf.dataStart as usize) + offset, key.dataStart as usize, key.length)
     offset += key.length
   }
 
   // Encode value
   buf[offset++] = 0xb8
   buf[offset++] = value.length as u8
-  memory.copy(
-    buf.dataStart as usize + offset,
-    value.dataStart as usize,
-    value.length,
-  )
+  memory.copy((buf.dataStart as usize) + offset, value.dataStart as usize, value.length)
 
   return buf
 }
@@ -238,21 +222,13 @@ export function hashExtension(key: Uint8Array, value: Uint8Array): Uint8Array {
     buf[offset++] = key[0]
   } else {
     buf[offset++] = 0x80 + key.length
-    memory.copy(
-      buf.dataStart as usize + offset,
-      key.dataStart as usize,
-      key.length,
-    )
+    memory.copy((buf.dataStart as usize) + offset, key.dataStart as usize, key.length)
     offset += key.length as u8
   }
 
   // Encode value
   buf[offset++] = 0xa0 // 0x80 + 0x20
-  memory.copy(
-    buf.dataStart as usize + offset,
-    value.dataStart as usize,
-    32,
-  )
+  memory.copy((buf.dataStart as usize) + offset, value.dataStart as usize, 32)
 
   return hash(buf)
 }
@@ -294,11 +270,7 @@ export function hashBranch(children: Array<Uint8Array | null>): Uint8Array {
       buf[offset++] = 0x80
     } else {
       buf[offset++] = 0xa0 // 0x80 + 0x20
-      memory.copy(
-        buf.dataStart as usize + offset,
-        c.dataStart as usize,
-        32,
-      )
+      memory.copy((buf.dataStart as usize) + offset, c.dataStart as usize, 32)
       offset += 32
     }
   }
@@ -526,16 +498,8 @@ function hexToBytes(hex: string): Uint8Array {
 function concatUint8Array(arr1: Uint8Array, arr2: Uint8Array): Uint8Array {
   let len = arr1.byteLength + arr2.byteLength
   let res = new Uint8Array(len)
-  memory.copy(
-    res.dataStart as usize,
-    arr1.dataStart as usize,
-    arr1.byteLength,
-  )
-  memory.copy(
-    res.dataStart as usize + arr1.byteLength,
-    arr2.dataStart as usize,
-    arr2.byteLength,
-  )
+  memory.copy(res.dataStart as usize, arr1.dataStart as usize, arr1.byteLength)
+  memory.copy((res.dataStart as usize) + arr1.byteLength, arr2.dataStart as usize, arr2.byteLength)
   return res
 }
 
@@ -545,12 +509,8 @@ function concatUint8Arrays(arrays: Array<Uint8Array>): Uint8Array {
   let counter = 0
   for (let i = 0, len = arrays.length; i < len; i++) {
     // TODO: check that arrays[1].byteOffset is right and covered by tests
-    let arr = unchecked(arrays[i]);
-    memory.copy(
-      res.dataStart as usize + counter,
-      arr.dataStart as usize,
-      arr.byteLength,
-    )
+    let arr = unchecked(arrays[i])
+    memory.copy((res.dataStart as usize) + counter, arr.dataStart as usize, arr.byteLength)
     counter += arr.byteLength
   }
   return res
@@ -563,7 +523,7 @@ function concatUint8Arrays(arrays: Array<Uint8Array>): Uint8Array {
  * @returns returns rlp encoded byte array.
  **/
 export function encode(input: RLPData): Uint8Array {
-  let children = input.children;
+  let children = input.children
   if (children.length) {
     let output = new Array<Uint8Array>()
     output.push(new Uint8Array(0))

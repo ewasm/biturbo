@@ -81,7 +81,7 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
   let input_decoded = decode(blockData)
   // input_decoded is type RLPData: { buffer: Uint8Array, children: RLPData[] }
   // [txes, addrs, hashes, leaves, instructions]
-  let inputChildren = input_decoded.children;
+  let inputChildren = input_decoded.children
   // let hash1 = inputChildren[2].children[0].buffer
 
   let txes = inputChildren[0].children
@@ -99,7 +99,7 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
 
   for (let i = 0, len = txes.length; i < len; i++) {
     let tx = txes[i]
-    let txChildren = tx.children;
+    let txChildren = tx.children
     // [toIdx, value, nonce, fromIdx]
     let toIdx = parseU8(txChildren[0].buffer)
     let fromIdx = parseU8(txChildren[3].buffer)
@@ -160,7 +160,7 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
     updatedAccounts[toIdx] = newToAccount
   }
 
-  let addrsLen = addrs.length;
+  let addrsLen = addrs.length
   let keys = new Array<Uint8Array>(addrsLen)
   for (let i = 0; i < addrsLen; i++) {
     keys[i] = hash(addrs[i].buffer)
@@ -238,7 +238,7 @@ function verifyMultiproofAndUpdate(
   let stack = new Array<StackItem>(100)
   let stackTop = 0
 
-  let leafKeysLen = leafKeys.length;
+  let leafKeysLen = leafKeys.length
   let paths = new Array<Array<u8>>(leafKeysLen)
   for (let i = 0; i < leafKeysLen; i++) {
     paths[i] = new Array<u8>()

@@ -163,10 +163,7 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
       stripBuf(Uint8Array.wrap(newFromNonce)),
       stripBuf(Uint8Array.wrap(newFromBalance)),
     )
-    let newToAccount = encodeAccount(
-      toAccount[0],
-      stripBuf(Uint8Array.wrap(newToBalance)),
-    )
+    let newToAccount = encodeAccount(toAccount[0], stripBuf(Uint8Array.wrap(newToBalance)))
 
     updatedAccounts[fromIdx] = newFromAccount
     updatedAccounts[toIdx] = newToAccount
@@ -178,7 +175,7 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
     }
   }
 
-  let addrsLen = addrs.length;
+  let addrsLen = addrs.length
   let keys = new Array<Uint8Array>(addrsLen)
   for (let i = 0; i < addrsLen; i++) {
     keys[i] = hash(addrs[i].buffer)
@@ -256,7 +253,7 @@ function verifyMultiproofAndUpdate(
   let stack = new Array<StackItem>(100)
   let stackTop = 0
 
-  let leafKeysLen = leafKeys.length;
+  let leafKeysLen = leafKeys.length
   let paths = new Array<Array<u8>>(leafKeysLen)
   for (let i = 0; i < leafKeysLen; i++) {
     paths[i] = new Array<u8>()
@@ -306,7 +303,7 @@ function verifyMultiproofAndUpdate(
           children[idx] = n.hash
           newChildren[idx] = n.newHash
 
-          let nPathIndices = n.pathIndices;
+          let nPathIndices = n.pathIndices
           pathIndices = pathIndices.concat(nPathIndices)
           for (let i = 0, len = nPathIndices.length; i < len; i++) {
             paths[nPathIndices[i]].unshift(idx)
@@ -335,7 +332,7 @@ function verifyMultiproofAndUpdate(
         let nh = hashExtension(key, n.newHash!)
 
         stack[stackTop++] = new StackItem(NodeType.Extension, n.pathIndices.slice(0), h, nh)
-        let nPathIndices = n.pathIndices;
+        let nPathIndices = n.pathIndices
         for (let i = 0, len = nPathIndices.length; i < len; i++) {
           let pathIndex = nPathIndices[i]
           paths[pathIndex] = nibbles.concat(paths[pathIndex])
@@ -385,7 +382,7 @@ function insertNewLeafNewBranch(
   // current_node.bodyrlp
 
   // pathStack could be smaller than 40
-  const pathStackSize = 40;
+  const pathStackSize = 40
   let pathStack = new Array<usize>(pathStackSize)
   pathStack.push(prestate_root_hash_ptr)
 

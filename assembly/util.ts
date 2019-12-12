@@ -3,11 +3,11 @@ import { ethash_keccak256 } from './keccak'
 @inline
 export function parseU8(buf: Uint8Array): u8 {
   // @ts-ignore
-  return buf.length ? load<u8>(buf.dataStart as usize) : 0;
+  return buf.length ? load<u8>(buf.dataStart as usize) : 0
 }
 
 export function bufEq(buf: Uint8Array, other: Uint8Array): boolean {
-  let bufLen = buf.length;
+  let bufLen = buf.length
   if (bufLen != other.length) return false
   for (let i = 0; i < bufLen; i++) {
     if (unchecked(buf[i]) != unchecked(other[i])) return false
@@ -29,7 +29,7 @@ export function padBuf(buf: Uint8Array, length: usize): Uint8Array {
 }
 
 export function cmpBuf(buf: Uint8Array, other: Uint8Array): usize {
-  let bufLen = buf.length;
+  let bufLen = buf.length
   if (bufLen > other.length) return 1
   if (bufLen < other.length) return -1
   let res = 0
@@ -130,7 +130,7 @@ export function nibbleArrToUintArr(arr: Array<u8>): Uint8Array {
   let buf = new Uint8Array(arr.length / 2)
   for (let i = 0, len = buf.length; i < len; i++) {
     let q = i << 1
-    unchecked(buf[i] = (arr[q] << 4) + arr[++q])
+    unchecked((buf[i] = (arr[q] << 4) + arr[++q]))
   }
   return buf
 }
@@ -138,7 +138,7 @@ export function nibbleArrToUintArr(arr: Array<u8>): Uint8Array {
 export function u8ArrToUintArr(arr: Array<u8>): Uint8Array {
   let buf = new Uint8Array(arr.length)
   for (let i = 0, len = arr.length; i < len; i++) {
-    unchecked(buf[i] = arr[i])
+    unchecked((buf[i] = arr[i]))
   }
   return buf
 }
