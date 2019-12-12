@@ -47,7 +47,7 @@ export enum NodeType {
 }
 
 // for Map<UintArray,Node> binaryen toText generates function names with commas, which wabt doesn't like.
-var Trie = new Map<usize, Node>()
+const Trie = new Map<usize, Node>()
 
 class Node {
   constructor(

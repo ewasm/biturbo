@@ -1,7 +1,7 @@
 const gulp = require("gulp")
 const fs = require("fs")
 const wabt = require("wabt")()
-const asc = require("assemblyscript/bin/asc")
+const asc = require("./assembly/node_modules/assemblyscript/bin/asc")
 
 /**
  * A bunch of magic happens below to merge functions from a wat file
