@@ -410,7 +410,7 @@ function rawMultiproof(proof: Multiproof, flatInstructions: boolean = false): an
 export function getBasicBlockIndices(code: Buffer): number[][] {
   const TERMINATING_OPS = ['JUMP', 'JUMPI', 'STOP', 'RETURN', 'REVERT', 'SELFDESTRUCT']
   const opcodes = getOpcodesForHF('istanbul')
-  const getOp = (i: number) => opcodes[code[i]] ? opcodes[code[i]].name : 'INVALID'
+  const getOp = (i: number) => (opcodes[code[i]] ? opcodes[code[i]].name : 'INVALID')
 
   const blocks = [[0, -1]]
   for (let i = 0; i < code.length; i++) {
