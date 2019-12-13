@@ -133,11 +133,7 @@ export function encodeAccount(nonce: Uint8Array, balance: Uint8Array): Uint8Arra
     buf[offset++] = nonce[0]
   } else {
     buf[offset++] = (0x80 + nonce.length) as u8
-    memory.copy(
-      (buf.buffer as usize) + buf.byteOffset + offset,
-      (nonce.buffer as usize) + nonce.byteOffset,
-      nonce.length,
-    )
+    memory.copy((buf.dataStart as usize) + offset, nonce.dataStart as usize, nonce.length)
     offset += nonce.length
   }
 
@@ -147,24 +143,20 @@ export function encodeAccount(nonce: Uint8Array, balance: Uint8Array): Uint8Arra
     buf[offset++] = balance[0]
   } else {
     buf[offset++] = (0x80 + balance.length) as u8
-    memory.copy(
-      (buf.buffer as usize) + buf.byteOffset + offset,
-      (balance.buffer as usize) + balance.byteOffset,
-      balance.length,
-    )
+    memory.copy((buf.dataStart as usize) + offset, balance.dataStart as usize, balance.length)
     offset += balance.length
   }
 
   // The first value in an array reference is a pointer
   // to the backing buffer. See the memory layout of arrays for more info.
-  let defaultStateRootPtr: usize = load<usize>(defaultStateRoot as usize)
+  let defaultStateRootPtr = load<usize>(defaultStateRoot as usize)
   buf[offset++] = 0xa0 // 0x80 + 0x20
-  memory.copy((buf.buffer as usize) + buf.byteOffset + offset, defaultStateRootPtr, 32)
+  memory.copy((buf.dataStart as usize) + offset, defaultStateRootPtr, 32)
   offset += 32
 
-  let defaultCodeHashPtr: usize = load<usize>(defaultCodeHash as usize)
+  let defaultCodeHashPtr = load<usize>(defaultCodeHash as usize)
   buf[offset++] = 0xa0
-  memory.copy((buf.buffer as usize) + buf.byteOffset + offset, defaultCodeHashPtr, 32)
+  memory.copy((buf.dataStart as usize) + offset, defaultCodeHashPtr, 32)
 
   return buf
 }
@@ -188,22 +180,14 @@ export function encodeLeaf(key: Uint8Array, value: Uint8Array): Uint8Array {
     buf[offset++] = key[0]
   } else {
     buf[offset++] = 0x80 + key.length
-    memory.copy(
-      (buf.buffer as usize) + buf.byteOffset + offset,
-      (key.buffer as usize) + key.byteOffset,
-      key.length,
-    )
+    memory.copy((buf.dataStart as usize) + offset, key.dataStart as usize, key.length)
     offset += key.length
   }
 
   // Encode value
   buf[offset++] = 0xb8
   buf[offset++] = value.length as u8
-  memory.copy(
-    (buf.buffer as usize) + buf.byteOffset + offset,
-    (value.buffer as usize) + value.byteOffset,
-    value.length,
-  )
+  memory.copy((buf.dataStart as usize) + offset, value.dataStart as usize, value.length)
 
   return buf
 }
@@ -238,21 +222,13 @@ export function hashExtension(key: Uint8Array, value: Uint8Array): Uint8Array {
     buf[offset++] = key[0]
   } else {
     buf[offset++] = 0x80 + key.length
-    memory.copy(
-      (buf.buffer as usize) + buf.byteOffset + offset,
-      (key.buffer as usize) + key.byteOffset,
-      key.length,
-    )
+    memory.copy((buf.dataStart as usize) + offset, key.dataStart as usize, key.length)
     offset += key.length as u8
   }
 
   // Encode value
   buf[offset++] = 0xa0 // 0x80 + 0x20
-  memory.copy(
-    (buf.buffer as usize) + buf.byteOffset + offset,
-    (value.buffer as usize) + value.byteOffset,
-    32,
-  )
+  memory.copy((buf.dataStart as usize) + offset, value.dataStart as usize, 32)
 
   return hash(buf)
 }
@@ -261,7 +237,7 @@ export function hashBranch(children: Array<Uint8Array | null>): Uint8Array {
   let dataLen: u32 = 0
   for (let i = 0; i < 17; i++) {
     let c = children[i]
-    if (c == null) {
+    if (c === null) {
       dataLen++
     } else {
       if (c.length == 32) {
@@ -294,11 +270,7 @@ export function hashBranch(children: Array<Uint8Array | null>): Uint8Array {
       buf[offset++] = 0x80
     } else {
       buf[offset++] = 0xa0 // 0x80 + 0x20
-      memory.copy(
-        (buf.buffer as usize) + buf.byteOffset + offset,
-        (c.buffer as usize) + c.byteOffset,
-        32,
-      )
+      memory.copy((buf.dataStart as usize) + offset, c.dataStart as usize, 32)
       offset += 32
     }
   }
@@ -500,20 +472,21 @@ function intToHex(integer: u32): string {
 }
 
 function bytesToHex(bytes: Uint8Array): string {
-  let res = new Uint8Array(bytes.length * 2)
-  for (let i = 0; i < bytes.length; i++) {
+  let len = bytes.length
+  let res = new Uint8Array(len * 2)
+  for (let i = 0; i < len; i++) {
     let hex = intToHex(bytes[i])
-    res[i * 2] = hex.charCodeAt(0)
+    res[i * 2 + 0] = hex.charCodeAt(0)
     res[i * 2 + 1] = hex.charCodeAt(1)
   }
-  return String.UTF8.decodeUnsafe((res.buffer as usize) + res.byteOffset, res.byteLength)
+  return String.UTF8.decodeUnsafe(res.dataStart as usize, res.byteLength)
 }
 
 function hexToBytes(hex: string): Uint8Array {
   if (!hex.length) {
     return new Uint8Array(0)
   }
-  assert(hex.length % 2 == 0)
+  assert((hex.length & 1) == 0)
   let byteLength = hex.length / 2
   let res = new Uint8Array(byteLength)
   for (let i = 0; i < byteLength; i++) {
@@ -525,31 +498,20 @@ function hexToBytes(hex: string): Uint8Array {
 function concatUint8Array(arr1: Uint8Array, arr2: Uint8Array): Uint8Array {
   let len = arr1.byteLength + arr2.byteLength
   let res = new Uint8Array(len)
-  memory.copy(
-    (res.buffer as usize) + res.byteOffset,
-    (arr1.buffer as usize) + arr1.byteOffset,
-    arr1.byteLength,
-  )
-  memory.copy(
-    (res.buffer as usize) + res.byteOffset + arr1.byteLength,
-    (arr2.buffer as usize) + arr2.byteOffset,
-    arr2.byteLength,
-  )
+  memory.copy(res.dataStart as usize, arr1.dataStart as usize, arr1.byteLength)
+  memory.copy((res.dataStart as usize) + arr1.byteLength, arr2.dataStart as usize, arr2.byteLength)
   return res
 }
 
 function concatUint8Arrays(arrays: Array<Uint8Array>): Uint8Array {
-  let len = arrays.reduce<u32>((acc, x) => acc + x.byteLength, 0)
+  let len = arrays.reduce((acc, x) => acc + x.byteLength, 0 as u32)
   let res = new Uint8Array(len)
   let counter = 0
-  for (let i = 0; i < arrays.length; i++) {
+  for (let i = 0, len = arrays.length; i < len; i++) {
     // TODO: check that arrays[1].byteOffset is right and covered by tests
-    memory.copy(
-      (res.buffer as usize) + res.byteOffset + counter,
-      (arrays[i].buffer as usize) + arrays[i].byteOffset,
-      arrays[i].byteLength,
-    )
-    counter += arrays[i].byteLength
+    let arr = unchecked(arrays[i])
+    memory.copy((res.dataStart as usize) + counter, arr.dataStart as usize, arr.byteLength)
+    counter += arr.byteLength
   }
   return res
 }
@@ -561,12 +523,13 @@ function concatUint8Arrays(arrays: Array<Uint8Array>): Uint8Array {
  * @returns returns rlp encoded byte array.
  **/
 export function encode(input: RLPData): Uint8Array {
-  if (input.children.length) {
+  let children = input.children
+  if (children.length) {
     let output = new Array<Uint8Array>()
     output.push(new Uint8Array(0))
     let totalLen = 0
-    for (let i = 0; i < input.children.length; i++) {
-      let e = encode(input.children[i])
+    for (let i = 0, len = children.length; i < len; i++) {
+      let e = encode(children[i])
       output.push(e)
       totalLen += output[i + 1].byteLength
     }
@@ -574,12 +537,13 @@ export function encode(input: RLPData): Uint8Array {
     return concatUint8Arrays(output)
   } else {
     //debug_mem((input.buffer.buffer as usize) + input.buffer.byteOffset, input.buffer.byteLength);
-    if (input.buffer.length == 1 && input.buffer[0] < 128) {
-      return input.buffer
+    let inputBuffer = input.buffer
+    if (inputBuffer.length == 1 && inputBuffer[0] < 128) {
+      return inputBuffer
     }
-    let len_encoded = encodeLength(input.buffer.length, 128)
+    let len_encoded = encodeLength(inputBuffer.length, 128)
     //debug_mem(len_encoded.dataStart, len_encoded.byteLength);
-    return concatUint8Array(len_encoded, input.buffer)
+    return concatUint8Array(len_encoded, inputBuffer)
   }
 }
 
@@ -705,7 +669,7 @@ export function _decode(input: Uint8Array): Decoded {
         // llength is the "length of the length"
 
         //sayHello(33);
-        //sayHello(llength); 
+        //sayHello(llength);
 
         //length = safeParseInt(bytesToHex(input.subarray(1, llength)), 16);
         //length = i32(input.subarray(1, llength));

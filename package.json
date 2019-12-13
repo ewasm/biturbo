@@ -31,7 +31,7 @@
     "@types/node": "^12.7.5",
     "@types/tape": "^4.2.33",
     "@types/lru-cache": "^5.1.0",
-    "assemblyscript": "github:AssemblyScript/assemblyscript#22c4cf42f05bd8610e5f8924d27a5b8636405a6d",
+    "assemblyscript": "^0.8.1",
     "gulp": "^4.0.2",
     "prettier": "^1.18.2",
     "scout.ts": "0.0.2",

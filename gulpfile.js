@@ -1,7 +1,7 @@
 const gulp = require("gulp")
 const fs = require("fs")
 const wabt = require("wabt")()
-const asc = require("assemblyscript/bin/asc")
+const asc = require("assemblyscript/cli/asc")
 
 /**
  * A bunch of magic happens below to merge functions from a wat file
@@ -10,12 +10,12 @@ const asc = require("assemblyscript/bin/asc")
  * The `ImportStatementToDelete` is a config setting that you might
  * have to update if the `export declare function keccak(...)`
  * is moved between different files.
- * 
+ *
  * If you change something and AS uses a different imported name,
  * don't forget to edit the entry function in keccak-funcs.wat
  * so that it matches. see the line near the bottom:
  *   (func $keccak/keccak ;; this name needs to match what assemblyscript generates
- * 
+ *
  */
 
 const ImportStatementToDelete = '(import "watimports" "$ethash_keccak256" (func $assembly/keccak/ethash_keccak256 (param i32 i32 i32)))'
@@ -61,7 +61,7 @@ function compileEvm() {
       "--runtime", "none",
       "--use", "abort=",
       "--memoryBase", "10000",
-      "--optimize"
+      "-O3"
     ], (res) => {
       console.log("ascDone res:", res)
       if (res) {
@@ -89,7 +89,7 @@ function compileToken() {
       "--runtime", "none",
       "--use", "abort=",
       "--memoryBase", "10000",
-      "--optimize"
+      "-O3"
     ], (res) => {
       console.log("ascDone res:", res)
       if (res) {

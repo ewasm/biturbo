@@ -5,24 +5,24 @@ import { Opcodes } from './opcodes'
 export function interpret(code: Uint8Array): void {
   // stack size is 100 elements
   // each stack element is 32 bytes
-  let stackSize = 100
-  let stackElementSize = 32
+  const stackSize = 100
+  const stackElementSize = 32
   let stack = new ArrayBuffer(stackElementSize * stackSize)
   let stackPtr = changetype<usize>(stack)
-  let stackElements = Array.create<Uint8Array>(100)
+  let stackElements = new Array<Uint8Array>(stackSize)
 
   for (let i = 0; i < stackSize; i++) {
-    stackElements[i] = Uint8Array.wrap(stack, i * stackElementSize, 32)
+    stackElements[i] = Uint8Array.wrap(stack, i * stackElementSize, stackElementSize)
   }
 
-  let memorySize = 100
-  let memoryElementSize = 16
+  const memorySize = 100
+  const memoryElementSize = 16
   let memory = new ArrayBuffer(memoryElementSize * memorySize)
   let memoryPtr = changetype<usize>(memory)
-  let memoryElements = Array.create<Uint8Array>(100)
+  let memoryElements = new Array<Uint8Array>(memorySize)
 
   for (let i = 0; i < memorySize; i++) {
-    memoryElements[i] = Uint8Array.wrap(memory, i * memoryElementSize, 16)
+    memoryElements[i] = Uint8Array.wrap(memory, i * memoryElementSize, memoryElementSize)
   }
 
   let stackTop: i32 = 0
