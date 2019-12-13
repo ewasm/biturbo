@@ -94,12 +94,9 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
   // Instructions are flat-encoded
   let instructions = input_decoded.children[5].buffer // instructions
 
-  let codeHashes: RLPData[] = []
-  let bytecode: RLPData[] = []
-  if (input_decoded.children.length == 8) {
-    codeHashes = input_decoded.children[6].children // codeHashes
-    bytecode = input_decoded.children[7].children // bytecode
-  }
+  let codeHashes: RLPData[] = input_decoded.children[6].children
+  let bytecode: RLPData[] = input_decoded.children[7].children
+  let expectedReturnValue = input_decoded.children[8].buffer
 
   if (addrs.length !== leafKeys.length || addrs.length !== accounts.length) {
     throw new Error('invalid multiproof')
@@ -162,8 +159,10 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
     let newFromAccount = encodeAccount(
       stripBuf(Uint8Array.wrap(newFromNonce)),
       stripBuf(Uint8Array.wrap(newFromBalance)),
+      fromAccount[2],
+      fromAccount[3]
     )
-    let newToAccount = encodeAccount(toAccount[0], stripBuf(Uint8Array.wrap(newToBalance)))
+    let newToAccount = encodeAccount(toAccount[0], stripBuf(Uint8Array.wrap(newToBalance)), toAccount[2], toAccount[3])
 
     updatedAccounts[fromIdx] = newFromAccount
     updatedAccounts[toIdx] = newToAccount
@@ -171,7 +170,11 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
     // check if to account is contract
     if (isContract(toAccount)) {
       let code = getCode(toAccount, codeHashes, bytecode)
-      interpret(code)
+      let returnValue = interpret(code)
+      if (expectedReturnValue.length !== 1) throw new Error('Unimplemented')
+      if (returnValue !== expectedReturnValue[0]) {
+        throw new Error('Invalid return value')
+      }
     }
   }
 
