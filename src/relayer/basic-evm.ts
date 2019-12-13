@@ -1,19 +1,15 @@
 import * as fs from 'fs'
 import * as path from 'path'
-import * as assert from 'assert'
 import { encode } from 'rlp'
-import { keccak256, stripZeros } from 'ethereumjs-util'
-import { verifyMultiproof, makeMultiproof, Multiproof } from '../multiproof'
+import { Multiproof } from '../multiproof'
 import {
   TestSuite,
   getTestsAccounts,
-  AccountInfo,
   transfer,
   rawMultiproof,
   SimulationData,
   getTestsTxes,
 } from './lib'
-import BN = require('bn.js')
 const Trie = require('merkle-patricia-tree/secure')
 
 export async function basicEvmTestSuite(): Promise<TestSuite> {
