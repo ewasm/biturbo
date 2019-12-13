@@ -160,9 +160,14 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
       stripBuf(Uint8Array.wrap(newFromNonce)),
       stripBuf(Uint8Array.wrap(newFromBalance)),
       fromAccount[2],
-      fromAccount[3]
+      fromAccount[3],
     )
-    let newToAccount = encodeAccount(toAccount[0], stripBuf(Uint8Array.wrap(newToBalance)), toAccount[2], toAccount[3])
+    let newToAccount = encodeAccount(
+      toAccount[0],
+      stripBuf(Uint8Array.wrap(newToBalance)),
+      toAccount[2],
+      toAccount[3],
+    )
 
     updatedAccounts[fromIdx] = newFromAccount
     updatedAccounts[toIdx] = newToAccount

@@ -4,7 +4,15 @@ import * as assert from 'assert'
 import { encode } from 'rlp'
 import { keccak256, stripZeros } from 'ethereumjs-util'
 import { verifyMultiproof, makeMultiproof, Multiproof } from '../multiproof'
-import { TestSuite, getTestsAccounts, AccountInfo, transfer, rawMultiproof, SimulationData, getTestsTxes } from './lib'
+import {
+  TestSuite,
+  getTestsAccounts,
+  AccountInfo,
+  transfer,
+  rawMultiproof,
+  SimulationData,
+  getTestsTxes,
+} from './lib'
 import BN = require('bn.js')
 const Trie = require('merkle-patricia-tree/secure')
 

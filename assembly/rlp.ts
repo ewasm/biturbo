@@ -46,7 +46,12 @@ export function decodeAccount(buf: Uint8Array): Array<Uint8Array> {
   return [nonce, balance, stateRoot, codeHash]
 }
 
-export function encodeAccount(nonce: Uint8Array, balance: Uint8Array, stateRoot: Uint8Array, codeHash: Uint8Array): Uint8Array {
+export function encodeAccount(
+  nonce: Uint8Array,
+  balance: Uint8Array,
+  stateRoot: Uint8Array,
+  codeHash: Uint8Array,
+): Uint8Array {
   // Nonce and balance are buffers with 0 <= length <= 32
   // We assume stateRoot and codeHash to be constant hashes
   let nonceLen = nonce.length <= 1 ? 1 : nonce.length + 1
