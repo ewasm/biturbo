@@ -36,14 +36,14 @@ export interface TestGetterArgs {
   test: string
 }
 
-interface SimulationData {
+export interface SimulationData {
   from: Buffer
   to: Buffer
   value: BN
   nonce: BN
 }
 
-interface AccountInfo {
+export interface AccountInfo {
   address: Buffer
   privateKey: Buffer
   account: Account
@@ -153,7 +153,7 @@ async function generateTxes(trie: any, accounts: AccountInfo[], count = 50) {
   return [txes, sortedAddrs, proof, simulationData]
 }
 
-async function transfer(trie: any, tx: SimulationData) {
+export async function transfer(trie: any, tx: SimulationData) {
   const { from, to, value, nonce } = tx
   assert(value.gten(0))
 
@@ -173,7 +173,7 @@ async function transfer(trie: any, tx: SimulationData) {
   await putAccount(trie, to, toAcc)
 }
 
-async function generateAccounts(trie: any, count = 500): Promise<AccountInfo[]> {
+export async function generateAccounts(trie: any, count = 500): Promise<AccountInfo[]> {
   const accounts = []
   for (let i = 0; i < count; i++) {
     const wallet = Wallet.generate()
@@ -222,7 +222,7 @@ export async function stateTestRunner(runnerArgs: RunnerArgs, test: any): Promis
   }
 }
 
-async function getTestsTxes(trie: any, accounts: AccountInfo[], test: any) {
+export async function getTestsTxes(trie: any, accounts: AccountInfo[], test: any) {
   const txes = []
   const pks = []
   const simulationData = []
@@ -325,7 +325,7 @@ async function runTx(vm: any, rawTx: any, pk: any) {
   return results
 }
 
-async function getTestsAccounts(
+export async function getTestsAccounts(
   trie: any,
   test: any,
 ): Promise<[AccountInfo[], Buffer[], Buffer[]]> {
@@ -384,7 +384,7 @@ async function getAccount(trie: any, address: Buffer): Promise<Account> {
   }
 }
 
-function rawMultiproof(proof: Multiproof, flatInstructions: boolean = false): any {
+export function rawMultiproof(proof: Multiproof, flatInstructions: boolean = false): any {
   const keys = []
   const values = []
   for (const kv of proof.keyvals) {
