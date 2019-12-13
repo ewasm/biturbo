@@ -412,6 +412,7 @@ export function getBasicBlockIndices(code: Buffer): number[][] {
   const opcodes = getOpcodesForHF('istanbul')
   const getOp = (i: number) => (opcodes[code[i]] ? opcodes[code[i]].name : 'INVALID')
 
+  // [start, end) indices
   const blocks = [[0, -1]]
   for (let i = 0; i < code.length; i++) {
     const op = getOp(i)
