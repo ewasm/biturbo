@@ -9,7 +9,7 @@ describe('stripBuf', () => {
     expect(res.length).toBe(3)
   })
 
-  it('shouldn\'t strip if first byte is nonzero', () => {
+  it('shouldnt strip if first byte is nonzero', () => {
     const buf = new Uint8Array(5)
     buf.fill(0)
     buf[0] = 2
