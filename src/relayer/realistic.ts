@@ -27,8 +27,6 @@ export interface TransactionData {
 
 export async function generateRealisticTestSuite(data: any): Promise<TestSuite> {
   const trie = new Trie()
-  const preStateRoot = toBuffer(data.preStateRoot)
-  trie.root = preStateRoot
 
   const accData = []
   const addrs = []
@@ -38,12 +36,14 @@ export async function generateRealisticTestSuite(data: any): Promise<TestSuite> 
   }
 
   const multiproof = await turboproofFromAccountData(trie, accData)
+  const preStateRoot = trie.root
 
   const sortedAddrs = sortAddrsByHash(addrs)
   const txes = []
   const simulationData = []
   for (const rawTx of data.transactions) {
-    const txData = transactionDataFromJSON(rawTx.result)
+    const rawTxData = rawTx.result ? rawTx.result : rawTx
+    const txData = transactionDataFromJSON(rawTxData)
     simulationData.push({
       to: txData.to,
       value: txData.value,
@@ -75,6 +75,8 @@ export async function generateRealisticTestSuite(data: any): Promise<TestSuite> 
 export async function turboproofFromAccountData(trie: any, data: AccountData[]): Promise<Multiproof> {
   const putRaw = promisify(trie._putRaw.bind(trie))
   const addrs = []
+  const preStateRoot = keccak256(data[0].accountProof[0])
+  trie.root = preStateRoot
   for (const accountData of data) {
     addrs.push(accountData.address)
     for (const node of accountData.accountProof) {
