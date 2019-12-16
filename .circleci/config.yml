@@ -22,6 +22,9 @@
            name: Run tests
            command: npm test
        - run:
+           name: Run assemblyscript tests
+           command: npm run test:as
+       - run:
            name: Run token ee with generated input
            command: npm run token
        #- run:
