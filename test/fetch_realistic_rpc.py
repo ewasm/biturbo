@@ -5,6 +5,7 @@ import sys
 
 import requests
 head = {"Content-type": "application/json"}
+endpoint = "http://localhost:8545"
 
 # based on an old script at https://gist.github.com/cdetrio/874e8e6fd044665ec90fd9473dbc8cd7
 
@@ -13,7 +14,7 @@ head = {"Content-type": "application/json"}
 
 def rpc_query(payload):
   # infura does not support eth_getProof, so need to use your own node
-  response = requests.post("http://localhost:8545", data=json.dumps(payload), headers=head)
+  response = requests.post(endpoint, data=json.dumps(payload), headers=head)
   #print("response for payload {}".format(payload))
   #print(response.text)
   r = response.json()
@@ -42,7 +43,7 @@ def getAccountWitnessesForBlock(block_num):
     'params': [hex(block_num), True],
     'id': 1
   }
-  response = requests.post("http://localhost:8545", data=json.dumps(getBlock_payload), headers=head)
+  response = requests.post(endpoint, data=json.dumps(getBlock_payload), headers=head)
   #print(response.text)
 
   r = response.json()
@@ -86,4 +87,4 @@ def getAccountWitnessesForBlock(block_num):
   return
 
 
-getAccountWitnessesForBlock(9084766)
+getAccountWitnessesForBlock(9121525)
