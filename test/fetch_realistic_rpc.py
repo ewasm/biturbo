@@ -66,11 +66,11 @@ def getAccountWitnessesForBlock(block_num):
     txs_in_block.append(tx)
 
     if tx['to'] not in proofs_by_account:
-      to_account_witness = getAccountWitness(tx['to'], tx['blockNumber'])
+      to_account_witness = getAccountWitness(tx['to'], hex(int(tx['blockNumber'], 0) - 1))
       proofs_by_account[tx['to']] = to_account_witness
 
     if tx['from'] not in proofs_by_account:
-      from_account_witness = getAccountWitness(tx['from'], tx['blockNumber'])
+      from_account_witness = getAccountWitness(tx['from'], hex(int(tx['blockNumber'], 0) - 1))
       proofs_by_account[tx['from']] = from_account_witness
 
     # TODO: handle contract txns properly, also need all accounts written to by a contract, e.g. with a CALL. see old gist
