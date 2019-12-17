@@ -28,26 +28,19 @@ export function padBuf(buf: Uint8Array, length: usize): Uint8Array {
   return Uint8Array.wrap(res, 0, length)
 }
 
-export function cmpBuf(buf: Uint8Array, other: Uint8Array): usize {
+export function cmpBuf(buf: Uint8Array, other: Uint8Array): i32 {
+  if (buf === other) return 0 // fast compare by references
   let bufLen = buf.length
-  if (bufLen > other.length) return 1
-  if (bufLen < other.length) return -1
-  let res = 0
+  let otherLen = other.length
+  if (bufLen > otherLen) return 1
+  if (bufLen < otherLen) return -1
   // Assume Big-endian
   for (let i = 0; i < bufLen; i++) {
-    let a = buf[i]
-    let b = other[i]
-    if (a == b) {
-      continue
-    } else if (a < b) {
-      res = -1
-    } else {
-      res = 1
-    }
-    // Break after first un-equal byte encountered
-    break
+    let a = unchecked(buf[i])
+    let b = unchecked(other[i])
+    if (a != b) return i32(a > b) - i32(a < b)
   }
-  return res
+  return 0
 }
 
 export function stripBuf(buf: Uint8Array): Uint8Array {
