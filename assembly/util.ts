@@ -49,7 +49,7 @@ export function cmpBuf(buf: Uint8Array, other: Uint8Array): usize {
 }
 
 export function stripBuf(buf: Uint8Array): Uint8Array {
-  let start = 0
+  let start = buf.length
   for (let i = 0, len = buf.length; i < len; i++) {
     if (unchecked(buf[i]) != 0) {
       start = i
