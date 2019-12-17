@@ -67,7 +67,7 @@ export function interpret(code: Uint8Array): u8 {
 
         // TODO: Consider whole offset, not only last byte
         let offsetU8: u8 = offset[31]
-        store<u8>(memoryPtr, val[31], 0)
+        store<u8>(memoryPtr + offsetU8, val[31], 0)
 
         stackTop -= 2
         break
