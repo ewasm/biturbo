@@ -6,75 +6,6 @@ export class RLPBranchNode {
   constructor(public children: Array<usize>, public dirty: Array<u8> | null) {}
 }
 
-const defaultStateRoot: u8[] = [
-  86,
-  232,
-  31,
-  23,
-  27,
-  204,
-  85,
-  166,
-  255,
-  131,
-  69,
-  230,
-  146,
-  192,
-  248,
-  110,
-  91,
-  72,
-  224,
-  27,
-  153,
-  108,
-  173,
-  192,
-  1,
-  98,
-  47,
-  181,
-  227,
-  99,
-  180,
-  33,
-]
-const defaultCodeHash: u8[] = [
-  197,
-  210,
-  70,
-  1,
-  134,
-  247,
-  35,
-  60,
-  146,
-  126,
-  125,
-  178,
-  220,
-  199,
-  3,
-  192,
-  229,
-  0,
-  182,
-  83,
-  202,
-  130,
-  39,
-  59,
-  123,
-  250,
-  216,
-  4,
-  93,
-  133,
-  164,
-  112,
-]
-
 export function decodeAccount(buf: Uint8Array): Array<Uint8Array> {
   // Data will have length > 55
   // buf[0] == 0xf8
@@ -115,7 +46,12 @@ export function decodeAccount(buf: Uint8Array): Array<Uint8Array> {
   return [nonce, balance, stateRoot, codeHash]
 }
 
-export function encodeAccount(nonce: Uint8Array, balance: Uint8Array): Uint8Array {
+export function encodeAccount(
+  nonce: Uint8Array,
+  balance: Uint8Array,
+  stateRoot: Uint8Array,
+  codeHash: Uint8Array,
+): Uint8Array {
   // Nonce and balance are buffers with 0 <= length <= 32
   // We assume stateRoot and codeHash to be constant hashes
   let nonceLen = nonce.length <= 1 ? 1 : nonce.length + 1
@@ -149,14 +85,12 @@ export function encodeAccount(nonce: Uint8Array, balance: Uint8Array): Uint8Arra
 
   // The first value in an array reference is a pointer
   // to the backing buffer. See the memory layout of arrays for more info.
-  let defaultStateRootPtr = load<usize>(defaultStateRoot as usize)
   buf[offset++] = 0xa0 // 0x80 + 0x20
-  memory.copy((buf.dataStart as usize) + offset, defaultStateRootPtr, 32)
+  memory.copy((buf.dataStart as usize) + offset, stateRoot.dataStart, 32)
   offset += 32
 
-  let defaultCodeHashPtr = load<usize>(defaultCodeHash as usize)
   buf[offset++] = 0xa0
-  memory.copy((buf.dataStart as usize) + offset, defaultCodeHashPtr, 32)
+  memory.copy((buf.dataStart as usize) + offset, codeHash.dataStart, 32)
 
   return buf
 }

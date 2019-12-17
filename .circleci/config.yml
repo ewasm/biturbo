@@ -27,6 +27,6 @@
        - run:
            name: Run token ee with generated input
            command: npm run token
-       #- run:
-       #    name: Run EVM ee with generated input
-       #    command: npm run evm
+       - run:
+           name: Run EVM ee with generated input
+           command: npm run evm

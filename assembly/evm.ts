@@ -2,7 +2,8 @@ import { debug, debugMem } from './debug'
 import { bignum_add256, debug_print32 } from './env'
 import { Opcodes } from './opcodes'
 
-export function interpret(code: Uint8Array): void {
+// TODO: Assume RETURN returns one byte, return 0 if no RETURN
+export function interpret(code: Uint8Array): u8 {
   // stack size is 100 elements
   // each stack element is 32 bytes
   const stackSize = 100
@@ -16,7 +17,7 @@ export function interpret(code: Uint8Array): void {
   }
 
   const memorySize = 100
-  const memoryElementSize = 16
+  const memoryElementSize = 32
   let memory = new ArrayBuffer(memoryElementSize * memorySize)
   let memoryPtr = changetype<usize>(memory)
   let memoryElements = new Array<Uint8Array>(memorySize)
@@ -28,6 +29,7 @@ export function interpret(code: Uint8Array): void {
   let stackTop: i32 = 0
 
   let pc: i32 = 0
+  let returnValue: u8 = 0
 
   while (pc < code.length) {
     let opcode: u8 = code[pc]
@@ -59,10 +61,36 @@ export function interpret(code: Uint8Array): void {
         // TODO:
         // store(position, value)
         break
+      case Opcodes.MStore8:
+        let offset = stackElements[stackTop - 1]
+        let val = stackElements[stackTop - 2]
+
+        // TODO: Consider whole offset, not only last byte
+        let offsetU8: u8 = offset[31]
+        store<u8>(memoryPtr + offsetU8, val[31], 0)
+
+        stackTop -= 2
+        break
+      case Opcodes.Return:
+        let offset = stackElements[stackTop - 1]
+        let length = stackElements[stackTop - 2]
+
+        // TODO: Consider whole offset and length
+        // not only last byte
+        let offsetU8: u8 = offset[31]
+        let lengthU8: u8 = length[31]
+        if (lengthU8 !== 1) throw new Error('Unimplemented')
+
+        returnValue = load<u8>(memoryPtr + offsetU8)
+        // Finish execution
+        pc = code.length
+        break
       default:
         debug_print32(404)
         pc = code.length // unknown opcode, finish execution
         break
     }
   }
+
+  return returnValue
 }

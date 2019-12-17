@@ -1,5 +1,6 @@
 // tslint:disable:no-console
 import { generateTestSuite, TestSuite, stateTestRunner, RunnerArgs, TestGetterArgs } from './lib'
+import { basicEvmTestSuite } from './basic-evm'
 const fs = require('fs')
 const yaml = require('js-yaml')
 const testing = require('ethereumjs-testing')
@@ -37,6 +38,9 @@ async function main() {
       .catch((err: any) => {
         console.log('Err: ', err)
       })
+  } else if (args.length === 3 && args[2] === '--basicEvm') {
+    const testSuite = await basicEvmTestSuite()
+    writeScoutConfig(testSuite, 'basic-evm.yaml', 'build/evm_with_keccak.wasm')
   } else {
     const testSuite = await generateTestSuite()
     writeScoutConfig(testSuite, 'turbo-token.yaml', 'build/token_with_keccak.wasm')

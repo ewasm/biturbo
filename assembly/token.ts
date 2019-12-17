@@ -78,12 +78,11 @@ export function main(): void {
 
 export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): Uint8Array {
   // input data is RLP
-  let input_decoded = decode(blockData)
+  let inputDecoded = decode(blockData)
+  let inputChildren = inputDecoded.children
+
   // input_decoded is type RLPData: { buffer: Uint8Array, children: RLPData[] }
   // [txes, addrs, hashes, leaves, instructions]
-  let inputChildren = input_decoded.children
-  // let hash1 = inputChildren[2].children[0].buffer
-
   let txes = inputChildren[0].children
   let addrs = inputChildren[1].children
   let hashes = inputChildren[2].children
@@ -153,8 +152,15 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
     let newFromAccount = encodeAccount(
       stripBuf(Uint8Array.wrap(newFromNonce)),
       stripBuf(Uint8Array.wrap(newFromBalance)),
+      fromAccount[2],
+      fromAccount[3],
     )
-    let newToAccount = encodeAccount(toAccount[0], stripBuf(Uint8Array.wrap(newToBalance)))
+    let newToAccount = encodeAccount(
+      toAccount[0],
+      stripBuf(Uint8Array.wrap(newToBalance)),
+      toAccount[2],
+      toAccount[3],
+    )
 
     updatedAccounts[fromIdx] = newFromAccount
     updatedAccounts[toIdx] = newToAccount

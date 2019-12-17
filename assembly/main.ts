@@ -81,25 +81,21 @@ export function main(): void {
 
 export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): Uint8Array {
   // input data is RLP
-  let input_decoded = decode(blockData)
+  let inputDecoded = decode(blockData)
+  let inputChildren = inputDecoded.children
+
   // input_decoded is type RLPData: { buffer: Uint8Array, children: RLPData[] }
   // [txes, addrs, hashes, leaves, instructions, codeHashes, bytecode]
-
-  let txes = input_decoded.children[0].children // txes
-  let addrs = input_decoded.children[1].children // addrs
-  let hashes = input_decoded.children[2].children // hashes
-  let leafKeys = input_decoded.children[3].children // leaves
-  let accounts = input_decoded.children[4].children // accounts
-
+  let txes = inputChildren[0].children
+  let addrs = inputChildren[1].children
+  let hashes = inputChildren[2].children
+  let leafKeys = inputChildren[3].children
+  let accounts = inputChildren[4].children
   // Instructions are flat-encoded
-  let instructions = input_decoded.children[5].buffer // instructions
-
-  let codeHashes: RLPData[] = []
-  let bytecode: RLPData[] = []
-  if (input_decoded.children.length == 8) {
-    codeHashes = input_decoded.children[6].children // codeHashes
-    bytecode = input_decoded.children[7].children // bytecode
-  }
+  let instructions = inputChildren[5].buffer
+  let codeHashes: RLPData[] = inputChildren[6].children
+  let bytecode: RLPData[] = inputChildren[7].children
+  let expectedReturnValue = inputChildren[8].buffer
 
   if (addrs.length !== leafKeys.length || addrs.length !== accounts.length) {
     throw new Error('invalid multiproof')
@@ -162,8 +158,15 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
     let newFromAccount = encodeAccount(
       stripBuf(Uint8Array.wrap(newFromNonce)),
       stripBuf(Uint8Array.wrap(newFromBalance)),
+      fromAccount[2],
+      fromAccount[3],
     )
-    let newToAccount = encodeAccount(toAccount[0], stripBuf(Uint8Array.wrap(newToBalance)))
+    let newToAccount = encodeAccount(
+      toAccount[0],
+      stripBuf(Uint8Array.wrap(newToBalance)),
+      toAccount[2],
+      toAccount[3],
+    )
 
     updatedAccounts[fromIdx] = newFromAccount
     updatedAccounts[toIdx] = newToAccount
@@ -171,7 +174,11 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
     // check if to account is contract
     if (isContract(toAccount)) {
       let code = getCode(toAccount, codeHashes, bytecode)
-      interpret(code)
+      let returnValue = interpret(code)
+      if (expectedReturnValue.length !== 1) throw new Error('Unimplemented')
+      if (returnValue !== expectedReturnValue[0]) {
+        throw new Error('Invalid return value')
+      }
     }
   }
 

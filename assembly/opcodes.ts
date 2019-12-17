@@ -15,6 +15,7 @@ export enum Opcodes {
   Pop = 0x50,
   MLoad = 0x51,
   MStore = 0x52,
+  MStore8 = 0x53,
   SStore = 0x55,
   Jump = 0x56,
   Jumpi = 0x57,
