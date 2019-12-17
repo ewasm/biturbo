@@ -44,6 +44,8 @@ export function cmpBuf(buf: Uint8Array, other: Uint8Array): usize {
     } else {
       res = 1
     }
+    // Break after first un-equal byte encountered
+    break
   }
   return res
 }
