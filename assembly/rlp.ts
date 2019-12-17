@@ -6,6 +6,16 @@ export class RLPBranchNode {
   constructor(public children: Array<usize>, public dirty: Array<u8> | null) {}
 }
 
+/**
+ * According to the RLP spec:
+ * A single byte whose value is in the [0x00, 0x7f] range,
+ * that byte is its own RLP encoding.
+ */
+@inline
+function isSmallByte(buf: Uint8Array): boolean {
+  return buf.length === 1 && buf[0] < 0x80
+}
+
 export function decodeAccount(buf: Uint8Array): Array<Uint8Array> {
   // Data will have length > 55
   // buf[0] == 0xf8
@@ -54,8 +64,8 @@ export function encodeAccount(
 ): Uint8Array {
   // Nonce and balance are buffers with 0 <= length <= 32
   // We assume stateRoot and codeHash to be constant hashes
-  let nonceLen = nonce.length <= 1 ? 1 : nonce.length + 1
-  let balanceLen = balance.length <= 1 ? 1 : balance.length + 1
+  let nonceLen = isSmallByte(nonce) ? 1 : nonce.length + 1
+  let balanceLen = isSmallByte(balance) ? 1 : balance.length + 1
   let dataLen = nonceLen + balanceLen + 33 + 33
 
   let buf = new Uint8Array(2 + dataLen)
@@ -65,7 +75,7 @@ export function encodeAccount(
 
   if (nonce.length == 0) {
     buf[offset++] = 0x80
-  } else if (nonce.length == 1) {
+  } else if (isSmallByte(nonce)) {
     buf[offset++] = nonce[0]
   } else {
     buf[offset++] = (0x80 + nonce.length) as u8
@@ -75,7 +85,7 @@ export function encodeAccount(
 
   if (balance.length == 0) {
     buf[offset++] = 0x80
-  } else if (balance.length == 1) {
+  } else if (isSmallByte(balance)) {
     buf[offset++] = balance[0]
   } else {
     buf[offset++] = (0x80 + balance.length) as u8
@@ -98,7 +108,7 @@ export function encodeAccount(
 export function encodeLeaf(key: Uint8Array, value: Uint8Array): Uint8Array {
   // Key is buffer with 1 < length < 32
   // Value is a buffer with 64 <= length <= 128
-  let keyBufLen: u8 = key.length == 1 ? 1 : (key.length as u8) + 1
+  let keyBufLen: u8 = isSmallByte(key) ? 1 : (key.length as u8) + 1
   let valueBufLen: u8 = (value.length as u8) + 2
   let dataLen: u8 = keyBufLen + valueBufLen
 
@@ -110,7 +120,7 @@ export function encodeLeaf(key: Uint8Array, value: Uint8Array): Uint8Array {
   let offset = 2
 
   // Encode key
-  if (key.length == 1) {
+  if (isSmallByte(key)) {
     buf[offset++] = key[0]
   } else {
     buf[offset++] = 0x80 + key.length
@@ -132,7 +142,7 @@ export function hashExtension(key: Uint8Array, value: Uint8Array): Uint8Array {
   // If key.length >= 21, then rlp structure changes
 
   // Each buffer with length < 55 needs 1 byte of metadata (0x80 + length)
-  let keyBufLen: u8 = key.length == 1 ? 1 : (key.length as u8) + 1
+  let keyBufLen: u8 = isSmallByte(key) ? 1 : (key.length as u8) + 1
   let dataLen: u8 = keyBufLen + 33
 
   let buf: Uint8Array
@@ -152,7 +162,7 @@ export function hashExtension(key: Uint8Array, value: Uint8Array): Uint8Array {
   }
 
   // Encode key
-  if (key.length == 1) {
+  if (isSmallByte(key)) {
     buf[offset++] = key[0]
   } else {
     buf[offset++] = 0x80 + key.length
