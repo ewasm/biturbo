@@ -81,22 +81,21 @@ export function main(): void {
 
 export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): Uint8Array {
   // input data is RLP
-  let input_decoded = decode(blockData)
+  let inputDecoded = decode(blockData)
+  let inputChildren = inputDecoded.children
+
   // input_decoded is type RLPData: { buffer: Uint8Array, children: RLPData[] }
   // [txes, addrs, hashes, leaves, instructions, codeHashes, bytecode]
-
-  let txes = input_decoded.children[0].children // txes
-  let addrs = input_decoded.children[1].children // addrs
-  let hashes = input_decoded.children[2].children // hashes
-  let leafKeys = input_decoded.children[3].children // leaves
-  let accounts = input_decoded.children[4].children // accounts
-
+  let txes = inputChildren[0].children
+  let addrs = inputChildren[1].children
+  let hashes = inputChildren[2].children
+  let leafKeys = inputChildren[3].children
+  let accounts = inputChildren[4].children
   // Instructions are flat-encoded
-  let instructions = input_decoded.children[5].buffer // instructions
-
-  let codeHashes: RLPData[] = input_decoded.children[6].children
-  let bytecode: RLPData[] = input_decoded.children[7].children
-  let expectedReturnValue = input_decoded.children[8].buffer
+  let instructions = inputChildren[5].buffer
+  let codeHashes: RLPData[] = inputChildren[6].children
+  let bytecode: RLPData[] = inputChildren[7].children
+  let expectedReturnValue = inputChildren[8].buffer
 
   if (addrs.length !== leafKeys.length || addrs.length !== accounts.length) {
     throw new Error('invalid multiproof')

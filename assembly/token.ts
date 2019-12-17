@@ -78,12 +78,11 @@ export function main(): void {
 
 export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): Uint8Array {
   // input data is RLP
-  let input_decoded = decode(blockData)
+  let inputDecoded = decode(blockData)
+  let inputChildren = inputDecoded.children
+
   // input_decoded is type RLPData: { buffer: Uint8Array, children: RLPData[] }
   // [txes, addrs, hashes, leaves, instructions]
-  let inputChildren = input_decoded.children
-  // let hash1 = inputChildren[2].children[0].buffer
-
   let txes = inputChildren[0].children
   let addrs = inputChildren[1].children
   let hashes = inputChildren[2].children
