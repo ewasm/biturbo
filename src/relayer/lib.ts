@@ -269,23 +269,7 @@ export async function getTestsTxes(trie: any, accounts: AccountInfo[], test: any
   const unsortedAddrs = Object.keys(toProve).map(s => Buffer.from(s, 'hex'))
   const keys = unsortedAddrs.map(a => keccak256(a))
   keys.sort(Buffer.compare)
-
-  // Sort addresses based on their hashes.
-  // Naive algorithm
-  const sortedAddrs = new Array(keys.length).fill(undefined)
-  for (const a of unsortedAddrs) {
-    let idx = -1
-    const h = keccak256(a)
-
-    for (let i = 0; i < keys.length; i++) {
-      const k = keys[i]
-      if (h.equals(k)) {
-        idx = i
-      }
-    }
-    assert(idx >= 0)
-    sortedAddrs[idx] = a
-  }
+  const sortedAddrs = sortAddrsByHash(unsortedAddrs)
 
   const proof = await makeMultiproof(trie, keys)
 
