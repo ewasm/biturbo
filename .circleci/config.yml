@@ -28,5 +28,8 @@
            name: Run token ee with generated input
            command: npm run token
        - run:
+           name: Run token with realistic rpc input
+           command: npm run token:realistic
+       - run:
            name: Run EVM ee with generated input
            command: npm run evm
