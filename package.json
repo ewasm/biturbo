@@ -8,7 +8,8 @@
     "token:relayer": "ts-node src/relayer/bin.ts",
     "token:build": "gulp token",
     "token:run": "scout.ts turbo-token.yaml",
-    "token:relayer:realistic": "ts-node src/relayer/bin.ts --realistic test/fixture/eth_getProof_sample.json",
+    "token:relayer:rpc": "ts-node src/relayer/rpc.ts test/fixture/eth_getproof_result.json",
+    "token:relayer:realistic": "ts-node src/relayer/bin.ts --realistic test/fixture/eth_getproof_result.json",
     "token:realistic": "npm run token:relayer:realistic && npm run token:build && scout.ts turbo-token-realistic.yaml",
     "evm": "npm run evm:relayer && npm run evm:build && npm run evm:run",
     "evm:relayer": "ts-node src/relayer/bin.ts --basicEvm",
@@ -50,6 +51,7 @@
     "wabt": "^1.0.11"
   },
   "dependencies": {
+    "axios": "^0.19.0",
     "bn.js": "^5.0.0",
     "ethereumjs-account": "^3.0.0",
     "ethereumjs-testing": "git+https://github.com/ethereumjs/ethereumjs-testing.git#v1.2.7",
