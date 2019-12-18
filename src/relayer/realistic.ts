@@ -4,7 +4,14 @@ import Account from 'ethereumjs-account'
 import { keccak256, stripZeros } from 'ethereumjs-util'
 import { encode } from 'rlp'
 import { Multiproof, makeMultiproof, verifyMultiproof } from '../multiproof'
-import { TestSuite, sortAddrsByHash, rawMultiproof, SimulationData, transfer, getAccount } from './lib'
+import {
+  TestSuite,
+  sortAddrsByHash,
+  rawMultiproof,
+  SimulationData,
+  transfer,
+  getAccount,
+} from './lib'
 const { promisify } = require('util')
 const Trie = require('merkle-patricia-tree/secure')
 
@@ -32,7 +39,7 @@ export async function generateRealisticTestSuite(data: any): Promise<TestSuite> 
   const addrs = []
   for (const acc of data.accounts) {
     accData.push(accountDataFromJSON(acc.result))
-    addrs.push(accData[accData.length-1].address)
+    addrs.push(accData[accData.length - 1].address)
   }
 
   const multiproof = await turboproofFromAccountData(trie, accData)
@@ -48,14 +55,19 @@ export async function generateRealisticTestSuite(data: any): Promise<TestSuite> 
       to: txData.to,
       value: txData.value,
       nonce: txData.nonce,
-      from: txData.from
+      from: txData.from,
     })
     const toIdx = sortedAddrs.findIndex((a: Buffer) => a.equals(txData.to))
     const fromIdx = sortedAddrs.findIndex((a: Buffer) => a.equals(txData.from))
     if (toIdx === -1 || fromIdx === -1) {
       throw new Error('Invalid transaction sender/recipient')
     }
-    txes.push([toIdx, stripZeros(txData.value.toBuffer('be', 32)), stripZeros(txData.nonce.toBuffer('be', 32)), fromIdx])
+    txes.push([
+      toIdx,
+      stripZeros(txData.value.toBuffer('be', 32)),
+      stripZeros(txData.nonce.toBuffer('be', 32)),
+      fromIdx,
+    ])
   }
 
   const blockData = encode([txes, sortedAddrs, ...rawMultiproof(multiproof as Multiproof, true)])
@@ -68,11 +80,14 @@ export async function generateRealisticTestSuite(data: any): Promise<TestSuite> 
   return {
     preStateRoot,
     blockData,
-    postStateRoot: trie.root
+    postStateRoot: trie.root,
   }
 }
 
-export async function turboproofFromAccountData(trie: any, data: AccountData[]): Promise<Multiproof> {
+export async function turboproofFromAccountData(
+  trie: any,
+  data: AccountData[],
+): Promise<Multiproof> {
   const putRaw = promisify(trie._putRaw.bind(trie))
   const addrs = []
   const preStateRoot = keccak256(data[0].accountProof[0])
@@ -97,7 +112,7 @@ export function accountDataFromJSON(data: any): AccountData {
     balance: toBN(data.balance),
     codeHash: toBuffer(data.codeHash),
     storageHash: toBuffer(data.storageHash),
-    storageProof: data.storageProof.map((n: string) => toBuffer(n))
+    storageProof: data.storageProof.map((n: string) => toBuffer(n)),
   }
 }
 
@@ -106,7 +121,7 @@ export function transactionDataFromJSON(data: any): TransactionData {
     to: toBuffer(data.to),
     value: toBN(data.value),
     nonce: toBN(data.nonce),
-    from: toBuffer(data.from)
+    from: toBuffer(data.from),
   }
 }
 

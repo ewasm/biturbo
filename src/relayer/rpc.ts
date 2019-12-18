@@ -8,27 +8,21 @@ const ENDPOINT = 'http://localhost:8545'
 const blockNumber = 9125141
 
 async function getBlockByNumber(n: number): Promise<any> {
-  const res = await axios.post(
-    ENDPOINT,
-    {
-      method: 'eth_getBlockByNumber',
-      params: [toHex(blockNumber), true],
-      id: 1
-    }
-  )
+  const res = await axios.post(ENDPOINT, {
+    method: 'eth_getBlockByNumber',
+    params: [toHex(blockNumber), true],
+    id: 1,
+  })
 
   return res.data
 }
 
 async function getProof(n: number, addr: string): Promise<any> {
-  const res = await axios.post(
-    ENDPOINT,
-    {
-      method: 'eth_getProof',
-      params: [addr, [], toHex(n)],
-      id: 1
-    }
-  )
+  const res = await axios.post(ENDPOINT, {
+    method: 'eth_getProof',
+    params: [addr, [], toHex(n)],
+    id: 1,
+  })
 
   const data = res.data
   if (data.error) {
@@ -72,4 +66,8 @@ function toHex(n: number): string {
   return '0x' + n.toString(16)
 }
 
-main().then().catch((e) => { throw new Error(e) })
+main()
+  .then()
+  .catch(e => {
+    throw new Error(e)
+  })
