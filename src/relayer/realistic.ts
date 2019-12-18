@@ -1,17 +1,8 @@
 import BN = require('bn.js')
-import * as assert from 'assert'
-import Account from 'ethereumjs-account'
 import { keccak256, stripZeros } from 'ethereumjs-util'
 import { encode } from 'rlp'
-import { Multiproof, makeMultiproof, verifyMultiproof } from '../multiproof'
-import {
-  TestSuite,
-  sortAddrsByHash,
-  rawMultiproof,
-  SimulationData,
-  transfer,
-  getAccount,
-} from './lib'
+import { Multiproof, makeMultiproof } from '../multiproof'
+import { TestSuite, sortAddrsByHash, rawMultiproof, SimulationData, transfer } from './lib'
 const { promisify } = require('util')
 const Trie = require('merkle-patricia-tree/secure')
 
@@ -70,7 +61,7 @@ export async function generateRealisticTestSuite(data: any): Promise<TestSuite> 
     ])
   }
 
-  const blockData = encode([txes, sortedAddrs, ...rawMultiproof(multiproof as Multiproof, true)])
+  const blockData = encode([txes, sortedAddrs, ...rawMultiproof(multiproof, true)])
 
   // Apply txes on top of trie to compute post state root
   for (const tx of simulationData as SimulationData[]) {

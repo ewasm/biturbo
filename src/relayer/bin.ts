@@ -3,7 +3,6 @@ import { generateTestSuite, TestSuite, stateTestRunner, RunnerArgs, TestGetterAr
 import { basicEvmTestSuite } from './basic-evm'
 import { generateRealisticTestSuite } from './realistic'
 const fs = require('fs')
-const path = require('path')
 const yaml = require('js-yaml')
 const testing = require('ethereumjs-testing')
 

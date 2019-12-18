@@ -10,7 +10,7 @@ const blockNumber = 9125141
 async function getBlockByNumber(n: number): Promise<any> {
   const res = await axios.post(ENDPOINT, {
     method: 'eth_getBlockByNumber',
-    params: [toHex(blockNumber), true],
+    params: [toHex(n), true],
     id: 1,
   })
 
