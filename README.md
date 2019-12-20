@@ -26,7 +26,7 @@ npm run token
 npm run evm
 ```
 
-Each of the above commands does 3 things. It runs a simluated relayer to generate input data for the EE, then compiles the AssemblyScript source code, and finally runs the resulting Wasm module with the generated input data. To run each of the steps separately you can use the corresponding npm scripts:
+Each of the above commands does 3 things. It runs a simulated relayer to generate input data for the EE, then compiles the AssemblyScript source code, and finally runs the resulting Wasm module with the generated input data. To run each of the steps separately you can use the corresponding npm scripts:
 
 ```sh
 npm run token:relayer
