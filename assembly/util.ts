@@ -53,10 +53,10 @@ export function stripBuf(buf: Uint8Array): Uint8Array {
 
 @inline
 export function hash(buf: Uint8Array): Uint8Array {
-  let hashBuf = new ArrayBuffer(32)
+  let res = new Uint8Array(32)
   // @ts-ignore
-  ethash_keccak256(hashBuf as usize, buf.dataStart as usize, buf.byteLength)
-  return Uint8Array.wrap(hashBuf)
+  ethash_keccak256(res.dataStart as usize, buf.dataStart as usize, buf.byteLength)
+  return res
 }
 
 @inline
