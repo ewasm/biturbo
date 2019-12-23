@@ -398,8 +398,8 @@ export class Decoded {
  * @param base The base to parse the integer into
  */
 function safeParseInt(v: string, base: u32): u32 {
+  // v.slice(0, 2) == '00'
   if (v.charCodeAt(0) == 0x30 && v.charCodeAt(1) == 0x30) {
-    // v.slice(0, 2) == '00'
     throw new Error('invalid RLP: extra zeros')
   }
   return <u32>I32.parseInt(v, base)
