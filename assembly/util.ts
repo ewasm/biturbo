@@ -9,10 +9,6 @@ export function parseU8(buf: Uint8Array): u8 {
 export function bufEq(buf: Uint8Array, other: Uint8Array): boolean {
   let bufLen = buf.length
   if (bufLen != other.length) return false
-  // for (let i = 0; i < bufLen; i++) {
-  //   if (unchecked(buf[i]) != unchecked(other[i])) return false
-  // }
-  // return true
   return memory.compare(buf.dataStart as usize, other.dataStart as usize, bufLen) == 0
 }
 
