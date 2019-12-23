@@ -443,10 +443,12 @@ function hexToBytes(hex: string): Uint8Array {
 }
 
 function concatUint8Array(arr1: Uint8Array, arr2: Uint8Array): Uint8Array {
-  let len = arr1.byteLength + arr2.byteLength
-  let res = new Uint8Array(len)
-  memory.copy(res.dataStart as usize, arr1.dataStart as usize, arr1.byteLength)
-  memory.copy((res.dataStart as usize) + arr1.byteLength, arr2.dataStart as usize, arr2.byteLength)
+  let len1 = arr1.byteLength
+  let len2 = arr2.byteLength
+  let res = new Uint8Array(len1 + len2)
+  let dst = res.dataStart as usize
+  memory.copy(dst, arr1.dataStart as usize, len1)
+  memory.copy(dst + len1, arr2.dataStart as usize, len2)
   return res
 }
 
