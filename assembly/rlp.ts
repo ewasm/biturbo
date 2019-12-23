@@ -44,7 +44,7 @@ export function decodeAccount(buf: Uint8Array): Array<Uint8Array> {
     offset = end
   } else {
     offset++
-    let end = offset = offset + balanceFirstByte - 0x80
+    let end = offset + balanceFirstByte - 0x80
     balance = buf.subarray(offset, end)
     offset = end
   }
@@ -398,7 +398,8 @@ export class Decoded {
  * @param base The base to parse the integer into
  */
 function safeParseInt(v: string, base: u32): u32 {
-  if (v.charCodeAt(0) == 0x30 && v.charCodeAt(1) == 0x30) { // v.slice(0, 2) == '00'
+  if (v.charCodeAt(0) == 0x30 && v.charCodeAt(1) == 0x30) {
+    // v.slice(0, 2) == '00'
     throw new Error('invalid RLP: extra zeros')
   }
   return <u32>I32.parseInt(v, base)
@@ -422,8 +423,8 @@ function bytesToHex(bytes: Uint8Array): string {
   let res = new Uint8Array(len * 2)
   for (let i = 0; i < len; i++) {
     let hex = intToHex(bytes[i])
-    unchecked(res[i * 2 + 0] = hex.charCodeAt(0))
-    unchecked(res[i * 2 + 1] = hex.charCodeAt(1))
+    unchecked((res[i * 2 + 0] = hex.charCodeAt(0)))
+    unchecked((res[i * 2 + 1] = hex.charCodeAt(1)))
   }
   return String.UTF8.decodeUnsafe(res.dataStart as usize, res.byteLength)
 }
