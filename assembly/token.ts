@@ -337,7 +337,7 @@ function verifyMultiproofAndUpdate(
   }
 
   // Verify given keys match computed paths
-  for (let i = 0; i < paths.length; i++) {
+  for (let i = 0, len = paths.length; i < len; i++) {
     let path = nibbleArrToUintArr(paths[i])
     if (cmpBuf(path, keys[i]) != 0) {
       throw new Error('invalid key')
@@ -369,9 +369,7 @@ function insertNewLeafNewBranch(
   // current_node.bodyrlp
 
   // pathStack could be smaller than 40
-  let pathStack = Array.create<usize>(40)
-  pathStack.push(prestate_root_hash_ptr)
-
+  let pathStack = [prestate_root_hash_ptr]
   for (let k_i = 0; k_i < 40; k_i++) {
     let branch_index_i = new_leaf_key_nibbles[k_i]
 
@@ -386,7 +384,7 @@ function insertNewLeafNewBranch(
       return
     } else if (currentNode.type == NodeType.Branch) {
       if (currentNode.branchBody.dirty == null) {
-        currentNode.branchBody.dirty = Array.create<u8>(16)
+        currentNode.branchBody.dirty = new Array<u8>()
 
         // setting the dirty flag to an empty array indicates that no children are dity but the branch node itself needs to be rehashed
         // explanation:
@@ -554,7 +552,7 @@ function rehashNode(staleHashPtr: usize): usize {
       throw new Error('ERROR: called rehash on a branch node that has no dirty flag')
     }
 
-    for (let i = 0; i < dirty_indexes.length; i++) {
+    for (let i = 0, len = dirty_indexes.length; i < len; i++) {
       let dirty_i = dirty_indexes[i]
       let stale_hash_for_dirty_child_ptr = node_with_stale_hash.branchBody.children[dirty_i]
       let new_hash_for_dirty_child_ptr = rehashNode(stale_hash_for_dirty_child_ptr)

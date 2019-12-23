@@ -267,13 +267,14 @@ export function hashBranchNode(branchNodeChildren: Array<usize>): usize {
   // bytes for hashes = len(0xa0 + hash) = 33*branch_num_children
   // bytes for empty nodes (0x80) = (17 - branch_num_children)
 
-  let child_indexes = new Array<u8>(17)
-  let child_hash_ptrs = new Array<usize>(17)
+  let child_indexes = new Array<u8>()
+  let child_hash_ptrs = new Array<usize>()
   for (let i = 0; i < 17; i++) {
     // read child index
-    if (branchNodeChildren[i] > 0) {
+    let branchNodeChild = branchNodeChildren[i]
+    if (branchNodeChild > 0) {
       child_indexes.push(i as u8)
-      child_hash_ptrs.push(branchNodeChildren[i])
+      child_hash_ptrs.push(branchNodeChild)
     }
   }
 
@@ -475,8 +476,7 @@ export function encode(input: RLPData): Uint8Array {
   let children = input.children
   let len = children.length
   if (len) {
-    let output = new Array<Uint8Array>()
-    output.push(new Uint8Array(0))
+    let output = [new Uint8Array(0)]
     let totalLen = 0
     for (let i = 0; i < len; i++) {
       let e = encode(children[i])
