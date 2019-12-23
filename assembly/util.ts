@@ -59,6 +59,7 @@ export function hash(buf: Uint8Array): Uint8Array {
   return Uint8Array.wrap(hashBuf)
 }
 
+@inline
 export function removeHexPrefix(nib_arr: Array<u8>): Array<u8> {
   // the hex prefix is merkle-patricia-trie encoding, not RLP
   return nib_arr.slice(1 + i32((nib_arr[0] & 1) == 0))
@@ -118,8 +119,6 @@ export function nibbleArrToUintArr(arr: Array<u8>): Uint8Array {
 export function u8ArrToUintArr(arr: Array<u8>): Uint8Array {
   let len = arr.length
   let buf = new Uint8Array(len)
-  for (let i = 0; i < len; i++) {
-    unchecked((buf[i] = arr[i]))
-  }
+  memory.copy(buf.dataStart as usize, arr.dataStart as usize, len)
   return buf
 }
