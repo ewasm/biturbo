@@ -458,10 +458,10 @@ function createNewBranchWhereLeafExists(
     addHexPrefix(new_key_for_existing_leaf_nibbles, true),
   )
 
-  let new_node_for_existing_leaf_rlp_children = Array.create<RLPData>(2)
-
-  new_node_for_existing_leaf_rlp_children.push(new RLPData(null, Array.create<RLPData>(0)))
-  new_node_for_existing_leaf_rlp_children.push(new RLPData(null, Array.create<RLPData>(0)))
+  let new_node_for_existing_leaf_rlp_children = [
+    new RLPData(null, new Array<RLPData>()),
+    new RLPData(null, new Array<RLPData>()),
+  ]
   new_node_for_existing_leaf_rlp_children[0].buffer = new_key_for_existing_leaf
   new_node_for_existing_leaf_rlp_children[1].buffer = existing_leaf_value
   let new_node_for_existing_leaf_rlp = new RLPData(null, new_node_for_existing_leaf_rlp_children)
@@ -485,10 +485,10 @@ function createNewBranchWhereLeafExists(
   let branch_index_for_new_leaf = new_key_nibbles[k_i]
   let key_for_new_leaf = nibbleArrToUintArr(addHexPrefix(new_key_nibbles.slice(k_i + 1), true))
 
-  let node_for_new_leaf_rlp_children = Array.create<RLPData>(2)
-
-  node_for_new_leaf_rlp_children.push(new RLPData(null, Array.create<RLPData>(0)))
-  node_for_new_leaf_rlp_children.push(new RLPData(null, Array.create<RLPData>(0)))
+  let node_for_new_leaf_rlp_children = [
+    new RLPData(null, new Array<RLPData>()),
+    new RLPData(null, new Array<RLPData>()),
+  ]
   node_for_new_leaf_rlp_children[0].buffer = key_for_new_leaf
   node_for_new_leaf_rlp_children[1].buffer = new_leaf_account_rlp
   let node_for_new_leaf_rlp = new RLPData(null, node_for_new_leaf_rlp_children)
