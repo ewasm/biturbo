@@ -9,10 +9,7 @@ export function parseU8(buf: Uint8Array): u8 {
 export function bufEq(buf: Uint8Array, other: Uint8Array): boolean {
   let bufLen = buf.length
   if (bufLen != other.length) return false
-  for (let i = 0; i < bufLen; i++) {
-    if (unchecked(buf[i]) != unchecked(other[i])) return false
-  }
-  return true
+  return memory.compare(buf.dataStart as usize, other.dataStart as usize, bufLen) == 0
 }
 
 export function padBuf(buf: Uint8Array, length: usize): Uint8Array {
@@ -45,7 +42,7 @@ export function cmpBuf(buf: Uint8Array, other: Uint8Array): i32 {
 
 export function stripBuf(buf: Uint8Array): Uint8Array {
   let start = buf.length
-  for (let i = 0, len = buf.length; i < len; i++) {
+  for (let i = 0, len = start; i < len; i++) {
     if (unchecked(buf[i]) != 0) {
       start = i
       break
@@ -56,19 +53,16 @@ export function stripBuf(buf: Uint8Array): Uint8Array {
 
 @inline
 export function hash(buf: Uint8Array): Uint8Array {
-  let hashBuf = new ArrayBuffer(32)
+  let res = new Uint8Array(32)
   // @ts-ignore
-  ethash_keccak256(hashBuf as usize, buf.dataStart as usize, buf.byteLength)
-  return Uint8Array.wrap(hashBuf)
+  ethash_keccak256(res.dataStart as usize, buf.dataStart as usize, buf.byteLength)
+  return res
 }
 
+@inline
 export function removeHexPrefix(nib_arr: Array<u8>): Array<u8> {
   // the hex prefix is merkle-patricia-trie encoding, not RLP
-  if (nib_arr[0] & 1) {
-    return nib_arr.slice(1)
-  } else {
-    return nib_arr.slice(2)
-  }
+  return nib_arr.slice(1 + i32((nib_arr[0] & 1) == 0))
 }
 
 export function addHexPrefix(key_nib_arr: Array<u8>, terminator: bool): Array<u8> {
@@ -82,7 +76,7 @@ export function addHexPrefix(key_nib_arr: Array<u8>, terminator: bool): Array<u8
   }
 
   if (terminator) {
-    key_nib_arr[0] = key_nib_arr[0] + 2
+    key_nib_arr[0] += 2
   }
 
   return key_nib_arr
@@ -93,15 +87,11 @@ export function u8ArrToNibbleArr(u8_arr: Array<u8>): Array<u8> {
 
   let nib_arr = new Array<u8>(len * 2) // length is num of hex chars for address_hash
   // TODO: we might not need to convert the whole thing to nibbles, just enough chars to follow the path to the proof
-
-  let q = 0
   for (let i = 0; i < len; i++) {
-    q = i * 2
-    nib_arr[q] = u8_arr[i] >> 4
-    q = q + 1
-    nib_arr[q] = u8_arr[i] & 15
+    let byte = u8_arr[i]
+    nib_arr[(i << 1) + 0] = byte >> 4
+    nib_arr[(i << 1) + 1] = byte & 15
   }
-
   return nib_arr
 }
 
@@ -109,31 +99,26 @@ export function uintArrToNibbleArr(uint_arr: Uint8Array): Array<u8> {
   let len = uint_arr.length
   let nib_arr = new Array<u8>(len * 2) // length is num of hex chars for address_hash
   // TODO: we might not need to convert the whole thing to nibbles, just enough chars to follow the path to the proof
-
-  let q = 0
   for (let i = 0; i < len; i++) {
-    q = i << 1
-    nib_arr[q] = uint_arr[i] >> 4
-    q = q + 1
-    nib_arr[q] = uint_arr[i] & 15
+    let byte = uint_arr[i]
+    nib_arr[(i << 1) + 0] = byte >> 4
+    nib_arr[(i << 1) + 1] = byte & 15
   }
-
   return nib_arr
 }
 
 export function nibbleArrToUintArr(arr: Array<u8>): Uint8Array {
-  let buf = new Uint8Array(arr.length / 2)
-  for (let i = 0, len = buf.length; i < len; i++) {
-    let q = i << 1
-    unchecked((buf[i] = (arr[q] << 4) + arr[++q]))
+  let len = arr.length / 2
+  let buf = new Uint8Array(len)
+  for (let i = 0; i < len; i++) {
+    unchecked((buf[i] = (arr[i << 1] << 4) + arr[(i << 1) + 1]))
   }
   return buf
 }
 
 export function u8ArrToUintArr(arr: Array<u8>): Uint8Array {
-  let buf = new Uint8Array(arr.length)
-  for (let i = 0, len = arr.length; i < len; i++) {
-    unchecked((buf[i] = arr[i]))
-  }
+  let len = arr.length
+  let buf = new Uint8Array(len)
+  memory.copy(buf.dataStart as usize, arr.dataStart as usize, len)
   return buf
 }

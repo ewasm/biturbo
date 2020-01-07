@@ -29,8 +29,8 @@ export function decodeAccount(buf: Uint8Array): Array<Uint8Array> {
   } else if (nonceLen <= 0x7f) {
     nonce = buf.subarray(2, 3)
   } else {
-    nonce = buf.subarray(3, 3 + nonceLen - 0x80)
     offset = 3 + nonceLen - 0x80
+    nonce = buf.subarray(3, offset)
   }
 
   let balance: Uint8Array
@@ -39,12 +39,14 @@ export function decodeAccount(buf: Uint8Array): Array<Uint8Array> {
     balance = new Uint8Array(0)
     offset++
   } else if (balanceFirstByte <= 0x7f) {
-    balance = buf.subarray(offset, offset + 1)
-    offset++
+    let end = offset + 1
+    balance = buf.subarray(offset, end)
+    offset = end
   } else {
     offset++
-    balance = buf.subarray(offset, offset + balanceFirstByte - 0x80)
-    offset = offset + balanceFirstByte - 0x80
+    let end = offset + balanceFirstByte - 0x80
+    balance = buf.subarray(offset, end)
+    offset = end
   }
 
   // stateRoot and codeHash are 32 byte hashes
@@ -194,7 +196,7 @@ export function hashBranch(children: Array<Uint8Array | null>): Uint8Array {
   }
 
   // How many bytes do we need to encode length?
-  let lenOfLen = dataLen > 255 ? 2 : 1
+  let lenOfLen = 1 + i32(dataLen > 255)
   let totalLen = 1 + lenOfLen + dataLen
   let buf = new Uint8Array(totalLen)
   let offset = 0
@@ -265,13 +267,14 @@ export function hashBranchNode(branchNodeChildren: Array<usize>): usize {
   // bytes for hashes = len(0xa0 + hash) = 33*branch_num_children
   // bytes for empty nodes (0x80) = (17 - branch_num_children)
 
-  let child_indexes = Array.create<u8>(17)
-  let child_hash_ptrs = Array.create<usize>(17)
+  let child_indexes = new Array<u8>()
+  let child_hash_ptrs = new Array<usize>()
   for (let i = 0; i < 17; i++) {
     // read child index
-    if (branchNodeChildren[i] > 0) {
+    let branchNodeChild = branchNodeChildren[i]
+    if (branchNodeChild > 0) {
       child_indexes.push(i as u8)
-      child_hash_ptrs.push(branchNodeChildren[i])
+      child_hash_ptrs.push(branchNodeChild)
     }
   }
 
@@ -396,10 +399,11 @@ export class Decoded {
  * @param base The base to parse the integer into
  */
 function safeParseInt(v: string, base: u32): u32 {
-  if (v.slice(0, 2) == '00') {
+  // v.slice(0, 2) == '00'
+  if (v.charCodeAt(0) == 0x30 && v.charCodeAt(1) == 0x30) {
     throw new Error('invalid RLP: extra zeros')
   }
-  return I32.parseInt(v, base) as u32
+  return <u32>I32.parseInt(v, base)
 }
 
 /** Transform an integer into its hexadecimal value */
@@ -412,7 +416,7 @@ function intToHex(integer: u32): string {
     res.push(hexAlphabet[r])
   } while (integer)
   let hex = res.reverse().join('')
-  return hex.length % 2 ? '0' + hex : hex
+  return hex.length & 1 ? '0' + hex : hex
 }
 
 function bytesToHex(bytes: Uint8Array): string {
@@ -420,8 +424,8 @@ function bytesToHex(bytes: Uint8Array): string {
   let res = new Uint8Array(len * 2)
   for (let i = 0; i < len; i++) {
     let hex = intToHex(bytes[i])
-    res[i * 2 + 0] = hex.charCodeAt(0)
-    res[i * 2 + 1] = hex.charCodeAt(1)
+    unchecked((res[i * 2 + 0] = hex.charCodeAt(0)))
+    unchecked((res[i * 2 + 1] = hex.charCodeAt(1)))
   }
   return String.UTF8.decodeUnsafe(res.dataStart as usize, res.byteLength)
 }
@@ -434,16 +438,18 @@ function hexToBytes(hex: string): Uint8Array {
   let byteLength = hex.length / 2
   let res = new Uint8Array(byteLength)
   for (let i = 0; i < byteLength; i++) {
-    res[i] = I32.parseInt(hex.substring(i * 2, 2), 16) as u8
+    res[i] = U8.parseInt(hex.substring(i * 2, 2), 16)
   }
   return res
 }
 
 function concatUint8Array(arr1: Uint8Array, arr2: Uint8Array): Uint8Array {
-  let len = arr1.byteLength + arr2.byteLength
-  let res = new Uint8Array(len)
-  memory.copy(res.dataStart as usize, arr1.dataStart as usize, arr1.byteLength)
-  memory.copy((res.dataStart as usize) + arr1.byteLength, arr2.dataStart as usize, arr2.byteLength)
+  let len1 = arr1.byteLength
+  let len2 = arr2.byteLength
+  let res = new Uint8Array(len1 + len2)
+  let dst = res.dataStart as usize
+  memory.copy(dst, arr1.dataStart as usize, len1)
+  memory.copy(dst + len1, arr2.dataStart as usize, len2)
   return res
 }
 
@@ -468,11 +474,11 @@ function concatUint8Arrays(arrays: Array<Uint8Array>): Uint8Array {
  **/
 export function encode(input: RLPData): Uint8Array {
   let children = input.children
-  if (children.length) {
-    let output = new Array<Uint8Array>()
-    output.push(new Uint8Array(0))
+  let len = children.length
+  if (len) {
+    let output = [new Uint8Array(0)]
     let totalLen = 0
-    for (let i = 0, len = children.length; i < len; i++) {
+    for (let i = 0; i < len; i++) {
       let e = encode(children[i])
       output.push(e)
       totalLen += output[i + 1].byteLength
@@ -482,12 +488,13 @@ export function encode(input: RLPData): Uint8Array {
   } else {
     //debug_mem((input.buffer.buffer as usize) + input.buffer.byteOffset, input.buffer.byteLength);
     let inputBuffer = input.buffer
-    if (inputBuffer.length == 1 && inputBuffer[0] < 128) {
+    len = inputBuffer.length
+    if (len == 1 && inputBuffer[0] < 128) {
       return inputBuffer
     }
-    let len_encoded = encodeLength(inputBuffer.length, 128)
-    //debug_mem(len_encoded.dataStart, len_encoded.byteLength);
-    return concatUint8Array(len_encoded, inputBuffer)
+    let encodedLen = encodeLength(len, 128)
+    //debug_mem(len_encoded.dataStart, encodedLen.byteLength);
+    return concatUint8Array(encodedLen, inputBuffer)
   }
 }
 
@@ -505,12 +512,12 @@ function encodeLength(len: u32, offset: u32): Uint8Array {
       let int_as_bytes = new Uint8Array(2)
       //let int_view = DataView.wrap(int_as_bytes.buffer, 0, 2);
       let int_view = new DataView(int_as_bytes.buffer, 0, 2)
-      int_view.setUint16(0, int as u16, false)
+      int_view.setUint16(0, int as u16)
       return int_as_bytes
     }
     throw new Error('longer lengths unsupported')
-    //return hexToBytes(intToHex(len + offset));
-    return hexToBytes(intToHex(len + offset))
+    // return hexToBytes(intToHex(len + offset));
+    // return hexToBytes(intToHex(len + offset))
   } else {
     /*
         let hexLength = intToHex(len);
@@ -529,7 +536,7 @@ function encodeLength(len: u32, offset: u32): Uint8Array {
       lLength = 2
       len_as_bytes = new Uint8Array(2)
       let len_view = new DataView(len_as_bytes.buffer, 0, 2)
-      len_view.setUint16(0, len as u16, false)
+      len_view.setUint16(0, len as u16)
     } else {
       throw new Error('longer lengths unsupported')
     }
@@ -545,7 +552,7 @@ function encodeLength(len: u32, offset: u32): Uint8Array {
       firstByte_as_bytes = new Uint8Array(2)
       //let int_view = DataView.wrap(int_as_bytes.buffer, 0, 2);
       let int_view = new DataView(firstByte_as_bytes.buffer, 0, 2)
-      int_view.setUint16(0, firstByte as u16, false)
+      int_view.setUint16(0, firstByte as u16)
       //return int_as_bytes;
     } else {
       throw new Error('longer lengths unsupported')
