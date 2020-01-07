@@ -368,7 +368,7 @@ async function putAccount(trie: any, address: Buffer, account: Account) {
   await promisify(trie.put.bind(trie))(address, account.serialize())
 }
 
-export async function getAccount(trie: any, address: Buffer): Promise<Account> {
+async function getAccount(trie: any, address: Buffer): Promise<Account> {
   const raw = await promisify(trie.get.bind(trie))(address)
   if (!raw) {
     return new Account()
