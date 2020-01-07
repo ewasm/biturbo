@@ -140,11 +140,11 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
     value = padBuf(value, 32)
     let fromBalance = padBuf(fromAccount[1], 32)
     let newFromBalance = new ArrayBuffer(32)
-    bignum_sub256(fromBalance.buffer as usize, value.buffer as usize, newFromBalance as usize)
+    bignum_sub256(fromBalance.dataStart, value.dataStart, newFromBalance as usize)
 
     let toBalance = padBuf(toAccount[1], 32)
     let newToBalance = new ArrayBuffer(32)
-    bignum_add256(toBalance.buffer as usize, value.buffer as usize, newToBalance as usize)
+    bignum_add256(toBalance.dataStart, value.dataStart, newToBalance as usize)
 
     let paddedNonce = padBuf(nonce, 32)
     let fromNonce = padBuf(fromAccount[0], 32)
@@ -152,7 +152,7 @@ export function processBlock(preStateRoot: Uint8Array, blockData: Uint8Array): U
     let one256 = new ArrayBuffer(32)
     let onedv = new DataView(one256)
     onedv.setUint8(31, 1)
-    bignum_add256(fromNonce.buffer as usize, one256 as usize, newFromNonce as usize)
+    bignum_add256(fromNonce.dataStart, one256 as usize, newFromNonce as usize)
 
     // Encode updated accounts
     let newFromAccount = encodeAccount(
