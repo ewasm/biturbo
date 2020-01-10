@@ -43,8 +43,8 @@ async function main() {
     const rpcData = JSON.parse(fs.readFileSync(process.argv[3]))
     const testSuite = await generateRealisticTestSuite(rpcData)
     writeScoutConfig(testSuite, 'turbo-token-realistic.yaml', 'build/token_with_keccak.wasm')
-  } else if (args.length === 3 && args[2] === '--basicEvm') {
-    const testSuite = await basicEvmTestSuite()
+  } else if (args.length >= 3 && args[2] === '--basicEvm') {
+    const testSuite = await basicEvmTestSuite(args[3])
     writeScoutConfig(testSuite, 'basic-evm.yaml', 'build/evm_with_keccak.wasm')
   } else {
     const testSuite = await generateTestSuite()
