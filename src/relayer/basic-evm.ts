@@ -12,7 +12,7 @@ import {
 } from './lib'
 const Trie = require('merkle-patricia-tree/secure')
 
-export async function basicEvmTestSuite(p? : string): Promise<TestSuite> {
+export async function basicEvmTestSuite(p : string = 'fixture/add.json'): Promise<TestSuite> {
   const trie = new Trie()
 
   const test = JSON.parse(fs.readFileSync(path.join(__dirname, p ? p : 'fixture/add.json'), 'utf-8'))
