@@ -1,7 +1,8 @@
 // tslint:disable:no-console
-import { generateTestSuite, TestSuite, stateTestRunner, RunnerArgs, TestGetterArgs } from './lib'
+import { generateTestSuite, TestSuite, stateTestRunner, RunnerArgs } from './lib'
 import { basicEvmTestSuite } from './basic-evm'
 import { generateRealisticTestSuite } from './realistic'
+import { getStateTest } from './state-test'
 const fs = require('fs')
 const yaml = require('js-yaml')
 const testing = require('ethereumjs-testing')
@@ -10,12 +11,11 @@ async function main() {
   const args = process.argv
 
   if (args.length === 4 && args[2] === '--stateTest') {
-    const testCase = args[3]
-    const testGetterArgs: TestGetterArgs = { test: testCase }
+    const testName = args[3]
     const runnerArgs: RunnerArgs = {
       stateless: true,
       fork: 'Petersburg',
-      test: testCase,
+      test: testName,
       scout: 'true',
       dist: '?',
       forkConfig: 'Petersburg',
@@ -26,19 +26,9 @@ async function main() {
       value: 0,
     }
 
-    await testing
-      .getTestsFromArgs(
-        'GeneralStateTests',
-        async (_filename: any, _testName: any, test: any) => {
-          const testSuite = await stateTestRunner(runnerArgs, test)
-          writeScoutConfig(testSuite, testCase + '.yaml', 'build/evm_with_keccak.wasm')
-        },
-        testGetterArgs,
-      )
-      .then(() => {})
-      .catch((err: any) => {
-        console.log('Err: ', err)
-      })
+    const test = await getStateTest(testName)
+    const testSuite = await stateTestRunner(runnerArgs, test)
+    writeScoutConfig(testSuite, testName + '.yaml', 'build/evm_with_keccak.wasm')
   } else if (args.length === 4 && args[2] === '--realistic') {
     const rpcData = JSON.parse(fs.readFileSync(process.argv[3]))
     const testSuite = await generateRealisticTestSuite(rpcData)

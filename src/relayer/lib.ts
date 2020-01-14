@@ -32,10 +32,6 @@ export interface RunnerArgs {
   value: number
 }
 
-export interface TestGetterArgs {
-  test: string
-}
-
 export interface SimulationData {
   from: Buffer
   to: Buffer
@@ -304,6 +300,10 @@ async function execute(options: any, trie: any, tx: SimulationData, pk: any) {
     hardfork: options.forkConfig.toLowerCase(),
   })
 
+  vm.on('step', (d: any) => {
+    console.log(d)
+  })
+
   await runTx(vm, rawTx, pk)
 }
 
@@ -425,7 +425,7 @@ export function getBasicBlockIndices(code: Buffer): number[][] {
   }
 
   // Close block if no terminating instruction at the end
-  if (blocks[blocks.length - 1][1] === undefined) {
+  if (blocks[blocks.length - 1][1] === -1) {
     blocks[blocks.length - 1][1] = code.length
   }
 
@@ -437,8 +437,11 @@ export function getBasicBlockIndices(code: Buffer): number[][] {
  * of all basic blocks (i.e. blocks of code with no
  * control flow change).
  */
-export function getBasicBlocks(code: Buffer): Buffer[] {
-  const blocks = getBasicBlockIndices(code)
+export function getBasicBlocks(code: Buffer, minLen: number = 0): Buffer[] {
+  let blocks = getBasicBlockIndices(code)
+  if (minLen) {
+    blocks = mergeBlocks(blocks, minLen)
+  }
   // Slice code based on block indices
   return blocks.map((b: number[]) => code.slice(b[0], b[1]))
 }
@@ -448,8 +451,11 @@ export function getBasicBlocks(code: Buffer): Buffer[] {
  * with these blocks as leaves. The key for each block is
  * the index of the first byte of that block in the bytecode.
  */
-export async function merkelizeCode(code: Buffer): Promise<any> {
-  const blockIndices = getBasicBlockIndices(code)
+export async function merkelizeCode(code: Buffer, minLen: number = 0): Promise<any> {
+  let blockIndices = getBasicBlockIndices(code)
+  if (minLen) {
+    blockIndices = mergeBlocks(blockIndices, minLen)
+  }
   const trie = new Trie()
   const putP = promisify(trie.put.bind(trie))
   // Keys are indices into the bytecode. Determine key length by
@@ -461,4 +467,28 @@ export async function merkelizeCode(code: Buffer): Promise<any> {
     await putP(key, val)
   }
   return trie
+}
+
+/**
+ * Given a list of basic blocks, it merges neighbouring blocks
+ * so that each block has a minimum length.
+ */
+export function mergeBlocks(blocks: number[][], minLen: number = 32): number[][] {
+  // [start, end)
+  const res = [[0, -1]]
+  for (const b of blocks) {
+    if (b[1] - res[res.length - 1][0] >= minLen) {
+      res[res.length - 1][1] = b[1]
+      res.push([b[1], -1])
+    }
+  }
+  // Close block if final block < minLen
+  if (res[res.length - 1][1] === -1) {
+    res[res.length - 1][1] = blocks[blocks.length - 1][1]
+  }
+  // Delete last block if it's an empty block
+  if (res[res.length - 1][0] === res[res.length - 1][1]) {
+    res.pop()
+  }
+  return res
 }
