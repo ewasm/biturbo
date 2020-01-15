@@ -8,7 +8,7 @@ import VM from 'ethereumjs-vm'
 import { encode, decode } from 'rlp'
 import { toBuffer } from 'ethereumjs-util'
 import { rawMultiproof } from '../src/relayer/lib'
-import { getBasicBlocks, getBasicBlockIndices, mergeBlocks, merkelizeCode } from '../src/relayer/bytecode'
+import { Bytecode, mergeBlocks } from '../src/relayer/bytecode'
 import { getStateTest, parseTestCases, getPreState, makeTx, makeBlockFromEnv, format, hexToBuffer } from '../src/relayer/state-test'
 import { Multiproof, makeMultiproof, verifyMultiproof } from '../src/multiproof'
 import BN = require('bn.js')
@@ -22,16 +22,16 @@ const verifyProofP = promisify(verifyProof)
 tape('get evm basic blocks', async t => {
   t.test('add11 bytecode, one block', (st: tape.Test) => {
     const codeHex = '600160010160005500'
-    const code = Buffer.from(codeHex, 'hex')
-    const blocks = getBasicBlocks(code)
+    const bytecode = new Bytecode(Buffer.from(codeHex, 'hex'))
+    const blocks = bytecode.getBasicBlocks()
     t.equal(blocks.length, 1, 'bytecode should have one block')
     t.equal(blocks[0].toString('hex'), codeHex)
     st.end()
   })
 
   t.test('two blocks separated by JUMPDEST', (st: tape.Test) => {
-    const code = Buffer.from('60005b600000', 'hex')
-    const blocks = getBasicBlocks(code)
+    const bytecode = new Bytecode(Buffer.from('60005b600000', 'hex'))
+    const blocks = bytecode.getBasicBlocks()
     t.equal(blocks.length, 2, 'bytecode should have two block')
     t.equal(blocks[0].toString('hex'), '6000')
     t.equal(blocks[1].toString('hex'), '5b600000')
@@ -41,9 +41,9 @@ tape('get evm basic blocks', async t => {
 
 tape('merkelize evm bytecode', async t => {
   t.test('merkelize basic code', async (st: tape.Test) => {
-    const code = Buffer.from('60005b600000', 'hex')
-    const blocks = getBasicBlockIndices(code)
-    const trie = await merkelizeCode(code)
+    const bytecode = new Bytecode(Buffer.from('60005b600000', 'hex'))
+    const blocks = bytecode.getBasicBlockIndices()
+    const trie = await bytecode.merkelizeCode()
     const key = keccak256(Buffer.from('02', 'hex'))
     const p = await proveP(trie, key)
     const v = await verifyProofP(trie.root, key, p)
@@ -310,7 +310,8 @@ async function prepareProof(trie: any, addrs: Buffer[]): Promise<any> {
 }
 
 function blockStats(code: Buffer, MIN_BLOCK_LEN: number): void {
-  const blocks = getBasicBlocks(code, MIN_BLOCK_LEN)
+  const bytecode = new Bytecode(code)
+  const blocks = bytecode.getBasicBlocks(MIN_BLOCK_LEN)
   const blockLens = blocks.map((b: Buffer) => b.length)
   blockLens.sort()
   console.log('avg block length', ss.average(blockLens))
@@ -320,7 +321,8 @@ function blockStats(code: Buffer, MIN_BLOCK_LEN: number): void {
 function codeTracer(state: any, contracts: any, MIN_BLOCK_LEN: number, debug: boolean = false) {
   return async (runState: any) => {
     const newContractData = async (code: Buffer) => {
-      let blockIndices = getBasicBlockIndices(code)
+      const bytecode = new Bytecode(code)
+      let blockIndices = bytecode.getBasicBlockIndices()
       blockIndices = mergeBlocks(blockIndices, MIN_BLOCK_LEN)
       return {
         code,
@@ -404,7 +406,8 @@ async function getCodeProofs(contracts: any, createdContracts: { [k: string]: bo
     }
 
     const contract = contracts[addr]
-    const trie = await merkelizeCode(contract.code, MIN_BLOCK_LEN)
+    const bytecode = new Bytecode(contract.code)
+    const trie = await bytecode.merkelizeCode(MIN_BLOCK_LEN)
     const keyLength = new BN(contract.code.length - 1).byteLength()
     const addrs = []
     const touched: number[] = Array.from(contract.touched)
