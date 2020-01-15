@@ -8,7 +8,7 @@ import VM from 'ethereumjs-vm'
 import { encode, decode } from 'rlp'
 import { toBuffer } from 'ethereumjs-util'
 import { rawMultiproof } from '../src/relayer/lib'
-import { Bytecode, mergeBlocks } from '../src/relayer/bytecode'
+import { Bytecode, BasicBlockChunker } from '../src/relayer/bytecode'
 import { getStateTest, parseTestCases, getPreState, makeTx, makeBlockFromEnv, format, hexToBuffer } from '../src/relayer/state-test'
 import { Multiproof, makeMultiproof, verifyMultiproof } from '../src/multiproof'
 import BN = require('bn.js')
@@ -22,27 +22,30 @@ const verifyProofP = promisify(verifyProof)
 tape('get evm basic blocks', async t => {
   t.test('add11 bytecode, one block', (st: tape.Test) => {
     const codeHex = '600160010160005500'
-    const bytecode = new Bytecode(Buffer.from(codeHex, 'hex'))
-    const blocks = bytecode.getBasicBlocks()
+    const code = Buffer.from(codeHex, 'hex')
+    const chunker = new BasicBlockChunker()
+    const blocks = chunker.getChunks(code)
     t.equal(blocks.length, 1, 'bytecode should have one block')
-    t.equal(blocks[0].toString('hex'), codeHex)
+    t.equal(blocks[0].code.toString('hex'), codeHex)
     st.end()
   })
 
   t.test('two blocks separated by JUMPDEST', (st: tape.Test) => {
-    const bytecode = new Bytecode(Buffer.from('60005b600000', 'hex'))
-    const blocks = bytecode.getBasicBlocks()
+    const code = Buffer.from('60005b600000', 'hex')
+    const chunker = new BasicBlockChunker()
+    const blocks = chunker.getChunks(code)
     t.equal(blocks.length, 2, 'bytecode should have two block')
-    t.equal(blocks[0].toString('hex'), '6000')
-    t.equal(blocks[1].toString('hex'), '5b600000')
+    t.equal(blocks[0].code.toString('hex'), '6000')
+    t.equal(blocks[1].code.toString('hex'), '5b600000')
     st.end()
   })
 })
 
 tape('merkelize evm bytecode', async t => {
   t.test('merkelize basic code', async (st: tape.Test) => {
-    const bytecode = new Bytecode(Buffer.from('60005b600000', 'hex'))
-    const blocks = bytecode.getBasicBlockIndices()
+    const code = Buffer.from('60005b600000', 'hex')
+    const chunker = new BasicBlockChunker()
+    const bytecode = new Bytecode(code, chunker)
     const trie = await bytecode.merkelizeCode()
     const key = keccak256(Buffer.from('02', 'hex'))
     const p = await proveP(trie, key)
@@ -73,16 +76,16 @@ tape('state tests', async t => {
         block.isHomestead = () => true
 
         const state = await getPreState(c.pre)
-        const contracts: any = {}
+        const traces: { [k: string]: CodeTrace } = {}
         //const { contracts, step } = codeTracer(state, MIN_BLOCK_LEN)
         const vm = new VM({ stateManager: state._wrapped })
-        vm.on('step', codeTracer(state, contracts, MIN_BLOCK_LEN))
+        vm.on('step', codeTracer(state, traces, MIN_BLOCK_LEN))
         const res = await vm.runTx({ block, tx })
         st.deepEqual(state._wrapped._trie.root, hexToBuffer(c.postStateRoot))
 
         // Now that we've determined which blocks of
         // each contract have been touched, prepare proofs.
-        const blockData = await getCodeProofs(contracts, {}, MIN_BLOCK_LEN)
+        const blockData = await getCodeProofs(traces, {})
 
         // The verifier checks proofs and executes
         // blocks of bytecode
@@ -130,13 +133,13 @@ tape('merkelize realistic bytecode', async (t: tape.Test) => {
     }
 
     let state = await getPreState(blockPreState.preState)
-    const contracts: any = {}
+    const traces:{ [k: string]: CodeTrace } = {}
     const createdContracts: { [k: string]: boolean } = {}
     let vm = new VM({ stateManager: state._wrapped, hardfork: 'istanbul' })
     // @ts-ignore
     vm.blockchain = blockchain!
     // Hook VM to track touched code blocks
-    vm.on('step', codeTracer(state, contracts, MIN_BLOCK_LEN, false))
+    vm.on('step', codeTracer(state, traces, MIN_BLOCK_LEN, false))
     vm.on('newContract', (e: any) => {
       createdContracts[e.address.toString('hex')] = true
     })
@@ -160,7 +163,7 @@ tape('merkelize realistic bytecode', async (t: tape.Test) => {
 
     // Now that we've determined which blocks of
     // each contract have been touched, prepare proofs.
-    const blockData = await getCodeProofs(contracts, createdContracts, MIN_BLOCK_LEN)
+    const blockData = await getCodeProofs(traces, createdContracts)
 
     let codeLengthSum = 0
     let proofLengthSum = 0
@@ -209,7 +212,7 @@ tape('merkelize realistic bytecode', async (t: tape.Test) => {
       vm = new VM({ stateManager: state._wrapped, hardfork: 'istanbul' })
       // @ts-ignore
       vm.blockchain = blockchain
-      //vm.on('step', printTrace)
+      //vm.on('step', printRunState)
       const res = await vm.runTx({ block, tx })
       t.deepEqual(expectedReceipt.bloom, res.bloom.bitvector)
       t.assert(expectedReceipt.gasUsed.eq(res.gasUsed))
@@ -241,44 +244,6 @@ tape('merkelize realistic bytecode', async (t: tape.Test) => {
   t.end()
 })
 
-function instructionInBlock(bi: any, pc: number): boolean {
-  return pc >= bi[0] && pc < bi[1]
-}
-
-function blockOfInstruction(blockIndices: any, pc: number): any {
-  for (const bi of blockIndices) {
-    if (instructionInBlock(bi, pc)) {
-      return bi
-    }
-  }
-  console.log(pc, blockIndices[blockIndices.length - 1])
-  throw new Error('Instruction not in any block')
-}
-
-function blockRange(blockIndices: any, start: number, end: number): any {
-  const res = []
-  const codeLength = blockIndices[blockIndices.length - 1][1]
-  if (start >= codeLength) start = codeLength - 1
-  if (end >= codeLength) end = codeLength - 1
-  let startBlock
-  let endBlock
-  for (const i in blockIndices) {
-    const bi = blockIndices[i]
-    if (instructionInBlock(bi, start)) {
-      startBlock = i
-    }
-  }
-  if (!startBlock) throw new Error('No start in block range')
-  for (const i in blockIndices) {
-    const bi = blockIndices[i]
-    if (instructionInBlock(bi, end)) {
-      endBlock = i
-    }
-  }
-  if (!endBlock) throw new Error('No end in block range')
-  return blockIndices.slice(startBlock, endBlock + 1)
-}
-
 async function prepareProof(trie: any, addrs: Buffer[]): Promise<any> {
   // Make sure keys are unique and sort them
   const keys = addrs.map(a => keccak256(a))
@@ -309,75 +274,82 @@ async function prepareProof(trie: any, addrs: Buffer[]): Promise<any> {
   return { proof, sortedAddrs }
 }
 
-function blockStats(code: Buffer, MIN_BLOCK_LEN: number): void {
+/*function blockStats(code: Buffer, MIN_BLOCK_LEN: number): void {
   const bytecode = new Bytecode(code)
   const blocks = bytecode.getBasicBlocks(MIN_BLOCK_LEN)
   const blockLens = blocks.map((b: Buffer) => b.length)
   blockLens.sort()
   console.log('avg block length', ss.average(blockLens))
   console.log('blocklengths min: ', ss.min(blockLens), 'max', ss.max(blockLens), 'median', ss.median(blockLens), 'std dev', ss.standardDeviation(blockLens))
+}*/
+
+interface CodeTrace {
+  bytecode: Bytecode
+  touched: Set<number>
 }
 
-function codeTracer(state: any, contracts: any, MIN_BLOCK_LEN: number, debug: boolean = false) {
+function codeTracer(state: any, traces: { [k: string]: CodeTrace }, MIN_BLOCK_LEN: number, debug: boolean = false) {
   return async (runState: any) => {
-    const newContractData = async (code: Buffer) => {
-      const bytecode = new Bytecode(code)
-      let blockIndices = bytecode.getBasicBlockIndices()
-      blockIndices = mergeBlocks(blockIndices, MIN_BLOCK_LEN)
+    const newContractData = async (code: Buffer): Promise<CodeTrace> => {
+      const chunker = new BasicBlockChunker(MIN_BLOCK_LEN)
+      const bytecode = new Bytecode(code, chunker)
       return {
-        code,
-        blockIndices: blockIndices,
+        bytecode,
         touched: new Set()
       }
     }
 
     if (debug) {
-      printTrace(runState)
+      printRunState(runState)
     }
 
     const addr = runState.codeAddress.toString('hex')
-    if (!contracts[addr]) {
-      contracts[addr] = await newContractData(runState.code)
+    let trace = traces[addr]
+    if (!trace) {
+      trace = traces[addr] = await newContractData(runState.code)
     }
 
-    const bi = blockOfInstruction(contracts[addr].blockIndices, runState.pc)
-    contracts[addr].touched.add(bi[0])
+    const chunk = trace.bytecode.pcChunk(runState.pc)
+    if (!chunk) throw new Error('PC not in chunk')
+    trace.touched.add(chunk.start)
 
     const sp = runState.stack.length - 1
     // We also need parts of code asked for by CODECOPY 
     if (runState.opcode.name === 'CODECOPY') {
       // Get code offset and length from stack
-      let offset = runState.stack[sp - 1].toNumber()
+      const offset = runState.stack[sp - 1].toNumber()
       const len = runState.stack[sp - 2].toNumber()
-      const blocks = blockRange(contracts[addr].blockIndices, offset, offset + len)
-      for (const b of blocks) {
-        contracts[addr].touched.add(b[0])
+      const chunks = trace.bytecode.chunkRange(offset, offset + len)
+      for (const c of chunks) {
+        trace.touched.add(c.start)
       }
     } else if (runState.opcode.name === 'EXTCODECOPY') {
       const extAddr = addressToBuffer(runState.stack[sp]).toString('hex')
       const offset = runState.stack[sp - 2].toNumber()
       const len = runState.stack[sp - 2].toNumber()
-      if (!contracts[extAddr]) {
-        contracts[extAddr] = await newContractData(await state.getContractCode(extAddr))
+      if (!traces[extAddr]) {
+        traces[extAddr] = await newContractData(await state.getContractCode(extAddr))
       }
-      const blocks = blockRange(contracts[extAddr].blockIndices, offset, offset + len)
-      for (const b of blocks) {
-        contracts[extAddr].touched.add(b[0])
+      const extTrace = traces[extAddr]
+      const chunks = trace.bytecode.chunkRange(offset, offset + len)
+      for (const c of chunks) {
+        trace.touched.add(c.start)
       }
     } else if (runState.opcode.name === 'EXTCODEHASH') {
       const extAddr = addressToBuffer(runState.stack[sp]).toString('hex')
-      if (!contracts[extAddr]) {
-        contracts[extAddr] = await newContractData(await state.getContractCode(extAddr))
+      if (!traces[extAddr]) {
+        traces[extAddr] = await newContractData(await state.getContractCode(extAddr))
       }
+      const extTrace = traces[extAddr]
       // Verifier needs every block to compute correct hash
-      for (const b of contracts[extAddr].blockIndices) {
-        contracts[extAddr].touched.add(b[0])
+      for (const c of extTrace.bytecode.chunks) {
+        extTrace.touched.add(c.start)
       }
     }
   }
 }
 
-function printTrace(runState: any) {
+function printRunState(runState: any) {
   let hexStack = []
   hexStack = runState.stack.map((item: any) => {
     return '0x' + new BN(item).toString(16, 0)
@@ -397,22 +369,22 @@ function printTrace(runState: any) {
   console.log(JSON.stringify(opTrace))
 }
 
-async function getCodeProofs(contracts: any, createdContracts: { [k: string]: boolean }, MIN_BLOCK_LEN: number) {
+async function getCodeProofs(traces: { [k: string]: CodeTrace }, createdContracts: { [k: string]: boolean }) {
   const blockData: { [k: string]: any } = {}
-  for (const addr of Object.keys(contracts)) {
+  for (const addr of Object.keys(traces)) {
     if (createdContracts[addr]) {
       console.log('Ignoring created contract ', addr)
       continue
     }
 
-    const contract = contracts[addr]
-    const bytecode = new Bytecode(contract.code)
-    const trie = await bytecode.merkelizeCode(MIN_BLOCK_LEN)
-    const keyLength = new BN(contract.code.length - 1).byteLength()
+    const trace = traces[addr]
+    const bytecode = trace.bytecode
+    const trie = await bytecode.merkelizeCode()
+    const keyLength = new BN(bytecode.code.length - 1).byteLength()
     const addrs = []
-    const touched: number[] = Array.from(contract.touched)
+    const touched: number[] = Array.from(trace.touched)
     console.log('-- Stats for ', addr)
-    console.log('num of blocks: ', contract.blockIndices.length, ' num of touched blocks: ', touched.length)
+    console.log('num of chunks: ', bytecode.chunks.length, ' num of touched blocks: ', touched.length)
     for (let bi of touched) {
       addrs.push(new BN(bi).toBuffer('be', keyLength))
     }
@@ -421,17 +393,17 @@ async function getCodeProofs(contracts: any, createdContracts: { [k: string]: bo
       codeRoot: trie.root,
       proof,
       sortedAddrs,
-      codeLength: contract.code.length // TODO: this is potentially attackable, encode length in trie somehow
+      codeLength: bytecode.code.length // TODO: this is potentially attackable, encode length in trie somehow
     }
 
     // Statistics
     const encoded = encode(rawMultiproof(proof, true))
-    console.log('code length: ', contract.code.length, 'proof length: ', encoded.length, 'space reduction(%): ', 1 - encoded.length / contract.code.length)
+    console.log('code length: ', bytecode.code.length, 'proof length: ', encoded.length, 'space reduction(%): ', 1 - encoded.length / bytecode.code.length)
     const hashesEn = encode(proof.hashes)
     const leavesEn = encode(proof.keyvals)
     console.log('#hashes', proof.hashes.length, '#leaves', proof.keyvals.length)
     console.log('proof hashes len: ', hashesEn.length, 'keyvals len: ', leavesEn.length)
-    blockStats(contract.code, MIN_BLOCK_LEN)
+    //blockStats(contract.code, MIN_BLOCK_LEN)
   }
   return blockData
 }
