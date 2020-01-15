@@ -7,7 +7,8 @@ import { keccak256, setLength } from 'ethereumjs-util'
 import VM from 'ethereumjs-vm'
 import { encode, decode } from 'rlp'
 import { toBuffer } from 'ethereumjs-util'
-import { getBasicBlocks, getBasicBlockIndices, mergeBlocks, merkelizeCode, rawMultiproof } from '../src/relayer/lib'
+import { rawMultiproof } from '../src/relayer/lib'
+import { getBasicBlocks, getBasicBlockIndices, mergeBlocks, merkelizeCode } from '../src/relayer/bytecode'
 import { getStateTest, parseTestCases, getPreState, makeTx, makeBlockFromEnv, format, hexToBuffer } from '../src/relayer/state-test'
 import { Multiproof, makeMultiproof, verifyMultiproof } from '../src/multiproof'
 import BN = require('bn.js')
@@ -50,18 +51,6 @@ tape('merkelize evm bytecode', async t => {
     st.end()
   })
 })
-
-/*tape('determine executed basic blocks', async t => {
-  t.test('basic code', async (st: tape.Test) => {
-    st.end()
-  })
-
-  t.test('add11', async (st: tape.Test) => {
-    const tests = await getStateTest('add11')
-    console.log(tests)
-    st.end()
-  })
-})*/
 
 tape('state tests', async t => {
   const MIN_BLOCK_LEN = 128
