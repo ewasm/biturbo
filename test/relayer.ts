@@ -330,39 +330,58 @@ function blockStats(code: Buffer, MIN_BLOCK_LEN: number): void {
 
 function codeTracer(state: any, contracts: any, MIN_BLOCK_LEN: number, debug: boolean = false) {
   return async (runState: any) => {
-    if (debug) {
-      printTrace(runState)
-    }
-
-    const addr = runState.codeAddress.toString('hex')
-    //console.log(addr, runState.pc)
-    if (!contracts[addr]) {
-      const code = runState.code //await state.getContractCode(runState.address)
+    const newContractData = async (code: Buffer) => {
       let blockIndices = getBasicBlockIndices(code)
       blockIndices = mergeBlocks(blockIndices, MIN_BLOCK_LEN)
-      contracts[addr] = {
+      return {
         code,
         blockIndices: blockIndices,
         touched: new Set()
       }
     }
 
+    if (debug) {
+      printTrace(runState)
+    }
+
+    const addr = runState.codeAddress.toString('hex')
+    if (!contracts[addr]) {
+      contracts[addr] = await newContractData(runState.code)
+    }
+
     const bi = blockOfInstruction(contracts[addr].blockIndices, runState.pc)
     contracts[addr].touched.add(bi[0])
 
+    const sp = runState.stack.length - 1
     // We also need parts of code asked for by CODECOPY 
     if (runState.opcode.name === 'CODECOPY') {
       // Get code offset and length from stack
-      const sp = runState.stack.length - 1
       let offset = runState.stack[sp - 1].toNumber()
       const len = runState.stack[sp - 2].toNumber()
       const blocks = blockRange(contracts[addr].blockIndices, offset, offset + len)
       for (const b of blocks) {
         contracts[addr].touched.add(b[0])
       }
-    } else if (runState.opcode.name === 'EXTCODECOPY' || runState.opcode.name === 'EXTCODEHASH') {
-      console.log(runState.opcode.name, '<<<<<<<<<<<<<<<<<<<<<<<<')
-      //throw new Error('EXTCOOOOOOODEEE<<<<<<<<<<<<<<<<<<<<<<<<<<<<<')
+    } else if (runState.opcode.name === 'EXTCODECOPY') {
+      const extAddr = addressToBuffer(runState.stack[sp]).toString('hex')
+      const offset = runState.stack[sp - 2].toNumber()
+      const len = runState.stack[sp - 2].toNumber()
+      if (!contracts[extAddr]) {
+        contracts[extAddr] = await newContractData(await state.getContractCode(extAddr))
+      }
+      const blocks = blockRange(contracts[extAddr].blockIndices, offset, offset + len)
+      for (const b of blocks) {
+        contracts[extAddr].touched.add(b[0])
+      }
+    } else if (runState.opcode.name === 'EXTCODEHASH') {
+      const extAddr = addressToBuffer(runState.stack[sp]).toString('hex')
+      if (!contracts[extAddr]) {
+        contracts[extAddr] = await newContractData(await state.getContractCode(extAddr))
+      }
+      // Verifier needs every block to compute correct hash
+      for (const b of contracts[extAddr].blockIndices) {
+        contracts[extAddr].touched.add(b[0])
+      }
     }
   }
 }
@@ -445,4 +464,9 @@ function getTxReceipt(data: any): any {
     gasUsed: new BN(ethjsUtil.stripHexPrefix(data.gasUsed), 16),
     bloom: Buffer.from(ethjsUtil.stripHexPrefix(data.logsBloom), 'hex'),
   }
+}
+
+const MASK_160 = new BN(1).shln(160).subn(1)
+function addressToBuffer(address: BN) {
+  return address.and(MASK_160).toArrayLike(Buffer, 'be', 20)
 }
