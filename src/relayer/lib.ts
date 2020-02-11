@@ -6,12 +6,12 @@ import { Multiproof, verifyMultiproof, makeMultiproof, flatEncodeInstructions } 
 import VM from 'ethereumjs-vm'
 import { Transaction } from 'ethereumjs-tx'
 import { getOpcodesForHF } from 'ethereumjs-vm/dist/evm/opcodes'
+import Common from 'ethereumjs-common'
 
 const assert = require('assert')
 const { promisify } = require('util')
 const Wallet = require('ethereumjs-wallet')
 const Trie = require('merkle-patricia-tree/secure')
-const Common = require('ethereumjs-common')
 
 export interface TestSuite {
   preStateRoot: Buffer
@@ -402,7 +402,7 @@ export function rawMultiproof(proof: Multiproof, flatInstructions: boolean = fal
 }
 
 export function getBasicBlockIndices(code: Buffer): number[][] {
-  const hfIstanbul = new Common('istanbul')
+  const hfIstanbul = new Common('mainnet', 'istanbul')
   const TERMINATING_OPS = ['JUMP', 'JUMPI', 'STOP', 'RETURN', 'REVERT', 'SELFDESTRUCT']
   const opcodes = getOpcodesForHF(hfIstanbul)
   const getOp = (i: number) => (opcodes[code[i]] ? opcodes[code[i]].name : 'INVALID')
