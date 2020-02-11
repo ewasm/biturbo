@@ -6,6 +6,7 @@ import { Multiproof, verifyMultiproof, makeMultiproof, flatEncodeInstructions } 
 import VM from 'ethereumjs-vm'
 import { Transaction } from 'ethereumjs-tx'
 import { getOpcodesForHF } from 'ethereumjs-vm/dist/evm/opcodes'
+import Common from 'ethereumjs-common'
 
 const assert = require('assert')
 const { promisify } = require('util')
@@ -401,8 +402,9 @@ export function rawMultiproof(proof: Multiproof, flatInstructions: boolean = fal
 }
 
 export function getBasicBlockIndices(code: Buffer): number[][] {
+  const hfIstanbul = new Common('mainnet', 'istanbul')
   const TERMINATING_OPS = ['JUMP', 'JUMPI', 'STOP', 'RETURN', 'REVERT', 'SELFDESTRUCT']
-  const opcodes = getOpcodesForHF('istanbul')
+  const opcodes = getOpcodesForHF(hfIstanbul)
   const getOp = (i: number) => (opcodes[code[i]] ? opcodes[code[i]].name : 'INVALID')
 
   // [start, end) indices
