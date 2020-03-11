@@ -41,7 +41,7 @@
     "assemblyscript": "^0.8.1",
     "gulp": "^4.0.2",
     "prettier": "^1.18.2",
-    "scout.ts": "0.0.2",
+    "scout.ts": "git+https://github.com/ewasm/scout.ts.git#for-biturbo-benchmarking",
     "tape": "^4.11.0",
     "ts-node": "^8.4.1",
     "tslint": "^5.20.0",
