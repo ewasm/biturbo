@@ -27,7 +27,7 @@
     "test:as": "asp"
   },
   "devDependencies": {
-    "@as-pect/assembly": "^2.6.0",
+    "@as-pect/assembly": "^3.1.1",
     "@as-pect/cli": "^2.6.0",
     "@as-pect/core": "^2.6.0",
     "@ethereumjs/config-nyc": "^1.1.1",
