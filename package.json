@@ -38,7 +38,7 @@
     "@types/lru-cache": "^5.1.0",
     "@types/node": "^12.7.5",
     "@types/tape": "^4.2.33",
-    "assemblyscript": "^0.8.1",
+    "assemblyscript": "^0.10.0",
     "gulp": "^4.0.2",
     "prettier": "^1.18.2",
     "scout.ts": "0.0.2",
