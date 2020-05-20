@@ -29,7 +29,7 @@
   "devDependencies": {
     "@as-pect/assembly": "^2.6.0",
     "@as-pect/cli": "^2.6.0",
-    "@as-pect/core": "^2.6.0",
+    "@as-pect/core": "^3.2.1",
     "@ethereumjs/config-nyc": "^1.1.1",
     "@ethereumjs/config-prettier": "^1.1.1",
     "@ethereumjs/config-tsc": "^1.1.1",
