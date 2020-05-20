@@ -52,7 +52,7 @@
   },
   "dependencies": {
     "axios": "^0.19.0",
-    "bn.js": "^5.0.0",
+    "bn.js": "5.1.1",
     "ethereumjs-account": "^3.0.0",
     "ethereumjs-testing": "git+https://github.com/ethereumjs/ethereumjs-testing.git#v1.2.7",
     "ethereumjs-util": "^6.1.0",
