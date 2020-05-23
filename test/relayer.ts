@@ -8,7 +8,7 @@ import VM from 'ethereumjs-vm'
 import { encode, decode } from 'rlp'
 import { toBuffer } from 'ethereumjs-util'
 import { rawMultiproof } from '../src/relayer/lib'
-import { Bytecode, BasicBlockChunker } from '../src/relayer/bytecode'
+import { Bytecode, Chunker, BasicBlockChunker, FixedSizeChunker } from '../src/relayer/bytecode'
 import { getStateTest, parseTestCases, getPreState, makeTx, makeBlockFromEnv, format, hexToBuffer } from '../src/relayer/state-test'
 import { Multiproof, makeMultiproof, verifyMultiproof } from '../src/multiproof'
 import BN = require('bn.js')
@@ -41,6 +41,100 @@ tape('get evm basic blocks', async t => {
   })
 })
 
+tape('get evm fixed sized chunks', async t => {
+  t.test('two full chunks', (st: tape.Test) => {
+    const codeHex = '60006000600060006000600060006000600060006000600060006000600060005050600060006000600060006000600060006000600060006000600060006000'
+    const code = Buffer.from(codeHex, 'hex')
+    const chunker = new FixedSizeChunker()
+    const chunks = chunker.getChunks(code)
+    t.equal(chunks.length, 2, 'bytecode should have 2 chunks')
+    console.log(chunks)
+    t.equal(chunks[0].code.toString('hex'), '6000600060006000600060006000600060006000600060006000600060006000')
+    t.equal(chunks[1].code.toString('hex'), '5050600060006000600060006000600060006000600060006000600060006000')
+    st.end()
+  })
+
+  t.test('one and a half chunks', (st: tape.Test) => {
+    const codeHex = '6000600060006000600060006000600060006000600060006000600060006000505060006000600060006000600060006000600060006000600060006000'
+    const code = Buffer.from(codeHex, 'hex')
+    const chunker = new FixedSizeChunker()
+    const chunks = chunker.getChunks(code)
+    t.equal(chunks.length, 2, 'bytecode should have 2 chunks')
+    t.equal(chunks[0].code.toString('hex'), '6000600060006000600060006000600060006000600060006000600060006000')
+    t.equal(chunks[1].code.toString('hex'), '505060006000600060006000600060006000600060006000600060006000')
+    st.end()
+  })
+
+  t.test('one code chunk, one full data chunk', (st: tape.Test) => {
+    const codeHex = '600060006000600060006000600060006000600060006000600060006000507f5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b'
+    const code = Buffer.from(codeHex, 'hex')
+    const chunker = new FixedSizeChunker()
+    const chunks = chunker.getChunks(code)
+    t.equal(chunks.length, 2, 'bytecode should have 2 chunks')
+    t.equal(chunks[0].code.toString('hex'), '600060006000600060006000600060006000600060006000600060006000507f')
+    t.equal(chunks[1].code.toString('hex'), '5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b')
+    t.equal(chunks[0].firstCodeByte, 0)
+    t.equal(chunks[1].firstCodeByte, 64)
+    st.end()
+  })
+
+  t.test('one code chunk, one almost full data chunk', (st: tape.Test) => {
+    const codeHex = '600060006000600060006000600060006000600060006000600060006000507e5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b'
+    const code = Buffer.from(codeHex, 'hex')
+    const chunker = new FixedSizeChunker()
+    const chunks = chunker.getChunks(code)
+    t.equal(chunks.length, 2, 'bytecode should have 2 chunks')
+    t.equal(chunks[0].code.toString('hex'), '600060006000600060006000600060006000600060006000600060006000507e')
+    t.equal(chunks[1].code.toString('hex'), '5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b')
+    t.equal(chunks[0].firstCodeByte, 0)
+    t.equal(chunks[1].firstCodeByte, 63)
+    st.end()
+  })
+
+  t.test('one code chunk, one data byte in next chunk', (st: tape.Test) => {
+    const codeHex = '60006000600060006000600060006000600060006000600060006000600050605b5b505050505050505050505050505050505050505050505050505050505050'
+    const code = Buffer.from(codeHex, 'hex')
+    const chunker = new FixedSizeChunker()
+    const chunks = chunker.getChunks(code)
+    t.equal(chunks.length, 2, 'bytecode should have 2 chunks')
+    t.equal(chunks[0].code.toString('hex'), '6000600060006000600060006000600060006000600060006000600060005060')
+    t.equal(chunks[1].code.toString('hex'), '5b5b505050505050505050505050505050505050505050505050505050505050')
+    t.equal(chunks[0].firstCodeByte, 0)
+    t.equal(chunks[1].firstCodeByte, 33)
+    st.end()
+  })
+
+  t.test('one code chunk, one data byte in next 2 chunks', (st: tape.Test) => {
+    const codeHex = '60006000600050605b5b6000600050605b5b6000'
+    const code = Buffer.from(codeHex, 'hex')
+    const chunker = new FixedSizeChunker(8)
+    const chunks = chunker.getChunks(code)
+    t.equal(chunks.length, 3, 'bytecode should have 3 chunks')
+    t.equal(chunks[0].code.toString('hex'), '6000600060005060')
+    t.equal(chunks[1].code.toString('hex'), '5b5b600060005060')
+    t.equal(chunks[2].code.toString('hex'), '5b5b6000')
+    t.equal(chunks[0].firstCodeByte, 0)
+    t.equal(chunks[1].firstCodeByte, 9)
+    t.equal(chunks[2].firstCodeByte, 17)
+    st.end()
+  })
+
+  t.test('firstCodeByte shouldnt be overwritten', (st: tape.Test) => {
+    const codeHex = '60006000600050635b5b5b5b635b5b5b5b5060006000'
+    const code = Buffer.from(codeHex, 'hex')
+    const chunker = new FixedSizeChunker(8)
+    const chunks = chunker.getChunks(code)
+    t.equal(chunks.length, 3, 'bytecode should have 3 chunks')
+    t.equal(chunks[0].code.toString('hex'), '6000600060005063')
+    t.equal(chunks[1].code.toString('hex'), '5b5b5b5b635b5b5b')
+    t.equal(chunks[2].code.toString('hex'), '5b5060006000')
+    t.equal(chunks[0].firstCodeByte, 0)
+    t.equal(chunks[1].firstCodeByte, 12)
+    t.equal(chunks[2].firstCodeByte, 17)
+    st.end()
+  })
+})
+
 tape('merkelize evm bytecode', async t => {
   t.test('merkelize basic code', async (st: tape.Test) => {
     const code = Buffer.from('60005b600000', 'hex')
@@ -51,6 +145,18 @@ tape('merkelize evm bytecode', async t => {
     const p = await proveP(trie, key)
     const v = await verifyProofP(trie.root, key, p)
     st.equal(v.toString('hex'), '5b600000')
+    st.end()
+  })
+
+  t.test('merkelize basic code with fixed size chunker', async (st: tape.Test) => {
+    const code = Buffer.from('60006000600050635b5b5b5b635b5b5b5b5060006000', 'hex')
+    const chunker = new FixedSizeChunker(8)
+    const bytecode = new Bytecode(code, chunker)
+    const trie = await bytecode.merkelizeCode()
+    const key = keccak256(Buffer.from('08', 'hex'))
+    const p = await proveP(trie, key)
+    const v = await verifyProofP(trie.root, key, p)
+    st.equal(v.toString('hex'), '045b5b5b5b635b5b5b')
     st.end()
   })
 })
@@ -79,7 +185,8 @@ tape('state tests', async t => {
         const traces: { [k: string]: CodeTrace } = {}
         //const { contracts, step } = codeTracer(state, MIN_BLOCK_LEN)
         const vm = new VM({ stateManager: state._wrapped })
-        vm.on('step', codeTracer(state, traces, MIN_BLOCK_LEN))
+        const chunker = new BasicBlockChunker(MIN_BLOCK_LEN)
+        vm.on('step', codeTracer(state, traces, MIN_BLOCK_LEN, chunker))
         const res = await vm.runTx({ block, tx })
         st.deepEqual(state._wrapped._trie.root, hexToBuffer(c.postStateRoot))
 
@@ -139,7 +246,8 @@ tape('merkelize realistic bytecode', async (t: tape.Test) => {
     // @ts-ignore
     vm.blockchain = blockchain!
     // Hook VM to track touched code blocks
-    vm.on('step', codeTracer(state, traces, MIN_BLOCK_LEN, false))
+    const chunker = new BasicBlockChunker(MIN_BLOCK_LEN)
+    vm.on('step', codeTracer(state, traces, MIN_BLOCK_LEN, chunker ,false))
     vm.on('newContract', (e: any) => {
       createdContracts[e.address.toString('hex')] = true
     })
@@ -244,6 +352,154 @@ tape('merkelize realistic bytecode', async (t: tape.Test) => {
   t.end()
 })
 
+tape('merkelize realistic bytecode fixed size chunker', async (t: tape.Test) => {
+  const MIN_BLOCK_LEN = 128
+  let data = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixture/blocks-prestate.json'), 'utf8'))
+
+  if (!Array.isArray(data)) data = [data]
+
+  const stats = []
+  for (const blockPreState of data) {
+    const block = makeRealBlock(blockPreState.block)
+    block.isHomestead = () => true
+
+    // Mock blockchain for BLOCKHASH opcode
+    const blockchain = {
+      getBlock: (n: BN, cb: any) => {
+        const bh = blockPreState.blockhashes['0x' + n.toString('hex')]
+        if (!bh) {
+          throw new Error('Unavailable blockhash requested')
+        }
+        return cb(null, { hash: () => toBuffer(bh) })
+      }
+    }
+
+    let state = await getPreState(blockPreState.preState)
+    const traces:{ [k: string]: CodeTrace } = {}
+    const createdContracts: { [k: string]: boolean } = {}
+    let vm = new VM({ stateManager: state._wrapped, hardfork: 'istanbul' })
+    // @ts-ignore
+    vm.blockchain = blockchain!
+    // Hook VM to track touched code blocks
+    const chunker = new FixedSizeChunker(128)
+    vm.on('step', codeTracer(state, traces, MIN_BLOCK_LEN, chunker, false))
+    vm.on('newContract', (e: any) => {
+      createdContracts[e.address.toString('hex')] = true
+    })
+
+    t.comment('Executing and tracing transactions')
+    for (const txIdx in blockPreState.block.transactions) {
+      // Construct tx from data
+      const txData = blockPreState.block.transactions[txIdx]
+      const expectedReceipt = getTxReceipt(blockPreState.receipts[txIdx])
+      const tx = makeTx(txData, 'istanbul')
+      tx._homestead = true
+      tx.enableHomestead = true
+
+      t.assert(tx.validate())
+
+      // Run tx and validate receipt
+      let res = await vm.runTx({ block, tx })
+      t.deepEqual(expectedReceipt.bloom, res.bloom.bitvector)
+      t.assert(expectedReceipt.gasUsed.eq(res.gasUsed))
+    }
+
+    // Now that we've determined which blocks of
+    // each contract have been touched, prepare proofs.
+    const blockData = await getCodeProofs(traces, createdContracts)
+
+    let codeLengthSum = 0
+    let proofLengthSum = 0
+    let proofHashesSum = 0
+    let proofLeavesSum = 0
+    // The verifier checks proofs and assembles proven
+    // blocks of code, simultaneously creating a skip list
+    // for data bytes at the beginning of chunks.
+    const skipList: any = {}
+    for (const addr in blockData) {
+      const contract = blockData[addr]
+      const keys = contract.sortedAddrs.map((a: Buffer) => keccak256(a))
+      t.assert(await verifyMultiproof(contract.codeRoot, contract.proof, keys), 'bytecode proof is valid')
+      const blockIndices = contract.sortedAddrs.map((a: Buffer) => new BN(a).toNumber())
+      const code = Buffer.alloc(contract.codeLength)
+      const leaves = contract.proof.keyvals.map((kv: Buffer) => decode(kv))
+      const toSkip = []
+      for (let i = 0; i < leaves.length; i++) {
+        const leaf = leaves[i]
+        const skip = leaf[1].readUInt8(0)
+        const chunk = leaf[1].slice(1)
+        for (let j = 0; j < skip; j++) {
+          toSkip.push(blockIndices[i] + j)
+        }
+        chunk.copy(code, blockIndices[i])
+      }
+      if (!blockPreState.preState['0x' + addr]) {
+        continue
+      }
+      blockPreState.preState['0x' + addr].code = '0x' + code.toString('hex')
+      skipList[addr] = toSkip
+
+      // Gather data for statistics
+      codeLengthSum += contract.codeLength
+      proofLengthSum += encode(rawMultiproof(contract.proof, true)).length
+      proofHashesSum += encode(contract.proof.hashes).length
+      proofLeavesSum += encode(contract.proof.keyvals).length
+    }
+    for (const addr in createdContracts) {
+      skipList[addr] = []
+    }
+    console.log(Object.keys(skipList))
+
+    const totalGasUsed = new BN(0)
+    // Revert to pre state and replace contract codes
+    // with codes constructed from the proofs
+    state = await getPreState(blockPreState.preState)
+    // Execute each tx with constructed code and validate
+    // the receipts
+    t.comment('Executing transactions with code constructed from chunks')
+    for (const txIdx in blockPreState.block.transactions) {
+      const txData = blockPreState.block.transactions[txIdx]
+      const expectedReceipt = getTxReceipt(blockPreState.receipts[txIdx])
+      const tx = makeTx(txData, 'istanbul')
+      console.log('Executin tx', tx.hash())
+      tx._homestead = true
+      tx.enableHomestead = true
+
+      vm = new VM({ stateManager: state._wrapped, hardfork: 'istanbul' })
+      // @ts-ignore
+      vm.blockchain = blockchain
+      //vm.on('step', printRunState)
+      const res = await vm.runTx({ block, tx, skipMap: skipList })
+      t.deepEqual(expectedReceipt.bloom, res.bloom.bitvector)
+      t.assert(expectedReceipt.gasUsed.eq(res.gasUsed))
+      totalGasUsed.iadd(res.gasUsed)
+    }
+
+    // TODO: Verify block header fields
+    t.assert(totalGasUsed.eq(new BN(ethjsUtil.stripHexPrefix(blockPreState.block.gasUsed), 'hex')), 'block gasUsed should match')
+
+
+    //console.log('> Sum of code lengths: ', codeLengthSum, 'Sum of proof lengths: ', proofLengthSum, 'Saving ratio: ', 1 - proofLengthSum / codeLengthSum)
+    stats.push({
+      blockNumber: new BN(block.header.number).toNumber(),
+      codeLengthSum,
+      proofLengthSum,
+      proofHashesSum,
+      proofLeavesSum
+    })
+  }
+
+  let csvOut = 'blockNumber,codeLength,proofLength,proofHashes,proofLeaves\n'
+  for (const bs of stats) {
+    const line = [bs.blockNumber,bs.codeLengthSum, bs.proofLengthSum, bs.proofHashesSum, bs.proofLeavesSum]
+    csvOut += line.join(',')
+    csvOut += '\n'
+  }
+  fs.writeFileSync('code-saving-fixed-size.csv', csvOut)
+
+  t.end()
+})
+
 async function prepareProof(trie: any, addrs: Buffer[]): Promise<any> {
   // Make sure keys are unique and sort them
   const keys = addrs.map(a => keccak256(a))
@@ -288,10 +544,12 @@ interface CodeTrace {
   touched: Set<number>
 }
 
-function codeTracer(state: any, traces: { [k: string]: CodeTrace }, MIN_BLOCK_LEN: number, debug: boolean = false) {
+function codeTracer(state: any, traces: { [k: string]: CodeTrace }, MIN_BLOCK_LEN: number, chunker: Chunker, debug: boolean = false) {
   return async (runState: any) => {
     const newContractData = async (code: Buffer): Promise<CodeTrace> => {
-      const chunker = new BasicBlockChunker(MIN_BLOCK_LEN)
+      //const chunker = new BasicBlockChunker(MIN_BLOCK_LEN)
+      //const chunker = new FixedSizeChunker(32)
+      //console.log('before new bytecode', chunker, code)
       const bytecode = new Bytecode(code, chunker)
       return {
         bytecode,
