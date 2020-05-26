@@ -59,6 +59,6 @@
     "ethereumjs-vm": "^4.1.0",
     "ethereumjs-wallet": "^0.6.3",
     "merkle-patricia-tree": "^3.0.0",
-    "rlp": "^2.2.3"
+    "rlp": "^2.2.5"
   }
 }
