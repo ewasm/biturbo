@@ -43,7 +43,7 @@
     "prettier": "^1.18.2",
     "scout.ts": "0.0.2",
     "tape": "^4.11.0",
-    "ts-node": "^8.4.1",
+    "ts-node": "^8.10.2",
     "tslint": "^5.20.0",
     "typescript": "^3.6.3",
     "typestrict": "^1.0.2",
