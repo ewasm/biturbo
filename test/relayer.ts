@@ -12,6 +12,7 @@ import { Bytecode, Chunker, BasicBlockChunker, FixedSizeChunker } from '../src/r
 import { getStateTest, parseTestCases, getPreState, makeTx, makeBlockFromEnv, format, hexToBuffer } from '../src/relayer/state-test'
 import { Multiproof, makeMultiproof, verifyMultiproof } from '../src/multiproof'
 import BN = require('bn.js')
+import _ = require('lodash')
 const { promisify } = require('util')
 const { prove, verifyProof } = require('merkle-patricia-tree/proof')
 const Block = require('ethereumjs-block')
@@ -218,7 +219,7 @@ tape('state tests', async t => {
 })
 
 tape('merkelize realistic bytecode', async (t: tape.Test) => {
-  const MIN_BLOCK_LEN = 128
+  const MIN_BLOCK_LEN = 32
   let data = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixture/blocks-prestate.json'), 'utf8'))
 
   if (!Array.isArray(data)) data = [data]
@@ -247,7 +248,8 @@ tape('merkelize realistic bytecode', async (t: tape.Test) => {
     vm.blockchain = blockchain!
     // Hook VM to track touched code blocks
     const chunker = new BasicBlockChunker(MIN_BLOCK_LEN)
-    vm.on('step', codeTracer(state, traces, MIN_BLOCK_LEN, chunker ,false))
+    const touchedIndices = new Set()
+    vm.on('step', codeTracer(state, traces, MIN_BLOCK_LEN, chunker, false))
     vm.on('newContract', (e: any) => {
       createdContracts[e.address.toString('hex')] = true
     })
@@ -272,11 +274,14 @@ tape('merkelize realistic bytecode', async (t: tape.Test) => {
     // Now that we've determined which blocks of
     // each contract have been touched, prepare proofs.
     const blockData = await getCodeProofs(traces, createdContracts)
+    const codeMetadata: any = {}
 
     let codeLengthSum = 0
     let proofLengthSum = 0
     let proofHashesSum = 0
     let proofLeavesSum = 0
+    let totalPCsSum = 0
+    let touchedPCsSum = 0
     // The verifier checks proofs and assembles proven
     // blocks of code
     for (const addr in blockData) {
@@ -286,20 +291,44 @@ tape('merkelize realistic bytecode', async (t: tape.Test) => {
       const blockIndices = contract.sortedAddrs.map((a: Buffer) => new BN(a).toNumber())
       const code = Buffer.alloc(contract.codeLength)
       const leaves = contract.proof.keyvals.map((kv: Buffer) => decode(kv))
+      const validPCs = []
       for (let i = 0; i < leaves.length; i++) {
         const leaf = leaves[i]
+        totalPCsSum += leaf[1].length
         leaf[1].copy(code, blockIndices[i])
+        //console.log('Contract', addr, 'index', blockIndices[i], 'to', blockIndices[i] + leaf[1].length, 'chunk', leaf[1])
+        for (let j = blockIndices[i]; j < blockIndices[i] + leaf[1].length; j++) {
+          validPCs.push(j)
+        }
       }
+      validPCs.sort((a: any, b: any) => a - b)
       if (!blockPreState.preState['0x' + addr]) {
         continue
       }
       blockPreState.preState['0x' + addr].code = '0x' + code.toString('hex')
+      codeMetadata[addr] = { size: contract.codeLength, hash: contract.codeHash }
+
+      // Make sure touched PCs are contained in chunks
+      const sortedTouchedPCs = Array.from(contract.touchedIndices)
+      sortedTouchedPCs.sort((a: any, b: any) => a - b)
+      //console.log(JSON.stringify(sortedTouchedPCs))
+      //console.log(JSON.stringify(validPCs))
+      //console.log('DIFF', JSON.stringify(_.difference(validPCs, sortedTouchedPCs)))
+      const invalidPCs = _.difference(sortedTouchedPCs, validPCs)
+      if (invalidPCs.length > 0) {
+        console.log('Touched PCs', JSON.stringify(sortedTouchedPCs))
+        console.log('Valid PCs', JSON.stringify(validPCs))
+        console.log('Invalid PCs:', JSON.stringify(invalidPCs))
+        console.log('Contract code length', contract.codeLength)
+        throw new Error('Ops invalid pcs')
+      }
 
       // Gather data for statistics
       codeLengthSum += contract.codeLength
       proofLengthSum += encode(rawMultiproof(contract.proof, true)).length
       proofHashesSum += encode(contract.proof.hashes).length
       proofLeavesSum += encode(contract.proof.keyvals).length
+      touchedPCsSum += contract.touchedIndices.size
     }
 
     const totalGasUsed = new BN(0)
@@ -321,7 +350,7 @@ tape('merkelize realistic bytecode', async (t: tape.Test) => {
       // @ts-ignore
       vm.blockchain = blockchain
       //vm.on('step', printRunState)
-      const res = await vm.runTx({ block, tx })
+      const res = await vm.runTx({ block, tx, codeMetadata })
       t.deepEqual(expectedReceipt.bloom, res.bloom.bitvector)
       t.assert(expectedReceipt.gasUsed.eq(res.gasUsed))
       totalGasUsed.iadd(res.gasUsed)
@@ -337,13 +366,15 @@ tape('merkelize realistic bytecode', async (t: tape.Test) => {
       codeLengthSum,
       proofLengthSum,
       proofHashesSum,
-      proofLeavesSum
+      proofLeavesSum,
+      totalPCsSum,
+      touchedPCsSum
     })
   }
 
-  let csvOut = 'blockNumber,codeLength,proofLength,proofHashes,proofLeaves\n'
+  let csvOut = 'blockNumber,codeLength,proofLength,proofHashes,proofLeaves,totalPCs,touchedPCs\n'
   for (const bs of stats) {
-    const line = [bs.blockNumber,bs.codeLengthSum, bs.proofLengthSum, bs.proofHashesSum, bs.proofLeavesSum]
+    const line = [bs.blockNumber,bs.codeLengthSum, bs.proofLengthSum, bs.proofHashesSum, bs.proofLeavesSum, bs.totalPCsSum, bs.touchedPCsSum]
     csvOut += line.join(',')
     csvOut += '\n'
   }
@@ -352,9 +383,9 @@ tape('merkelize realistic bytecode', async (t: tape.Test) => {
   t.end()
 })
 
-tape('merkelize realistic bytecode fixed size chunker', async (t: tape.Test) => {
+tape.skip('merkelize realistic bytecode fixed size chunker', async (t: tape.Test) => {
   const MIN_BLOCK_LEN = 128
-  let data = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixture/blocks-prestate.json'), 'utf8'))
+  let data = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixture/block-prestate.json'), 'utf8'))
 
   if (!Array.isArray(data)) data = [data]
 
@@ -407,11 +438,13 @@ tape('merkelize realistic bytecode fixed size chunker', async (t: tape.Test) => 
     // Now that we've determined which blocks of
     // each contract have been touched, prepare proofs.
     const blockData = await getCodeProofs(traces, createdContracts)
+    const codeMetadata: { [k: string]: any } = {}
 
     let codeLengthSum = 0
     let proofLengthSum = 0
     let proofHashesSum = 0
     let proofLeavesSum = 0
+    let touchedPCsSum = 0
     // The verifier checks proofs and assembles proven
     // blocks of code, simultaneously creating a skip list
     // for data bytes at the beginning of chunks.
@@ -438,12 +471,14 @@ tape('merkelize realistic bytecode fixed size chunker', async (t: tape.Test) => 
       }
       blockPreState.preState['0x' + addr].code = '0x' + code.toString('hex')
       skipList[addr] = toSkip
+      codeMetadata[addr] = { size: contract.codeLength, hash: contract.codeHash }
 
       // Gather data for statistics
       codeLengthSum += contract.codeLength
       proofLengthSum += encode(rawMultiproof(contract.proof, true)).length
       proofHashesSum += encode(contract.proof.hashes).length
       proofLeavesSum += encode(contract.proof.keyvals).length
+      touchedPCsSum += contract.touchedIndices.size
     }
     for (const addr in createdContracts) {
       skipList[addr] = []
@@ -469,7 +504,7 @@ tape('merkelize realistic bytecode fixed size chunker', async (t: tape.Test) => 
       // @ts-ignore
       vm.blockchain = blockchain
       //vm.on('step', printRunState)
-      const res = await vm.runTx({ block, tx, skipMap: skipList })
+      const res = await vm.runTx({ block, tx, skipMap: skipList, codeMetadata })
       t.deepEqual(expectedReceipt.bloom, res.bloom.bitvector)
       t.assert(expectedReceipt.gasUsed.eq(res.gasUsed))
       totalGasUsed.iadd(res.gasUsed)
@@ -485,13 +520,14 @@ tape('merkelize realistic bytecode fixed size chunker', async (t: tape.Test) => 
       codeLengthSum,
       proofLengthSum,
       proofHashesSum,
-      proofLeavesSum
+      proofLeavesSum,
+      touchedPCsSum
     })
   }
 
-  let csvOut = 'blockNumber,codeLength,proofLength,proofHashes,proofLeaves\n'
+  let csvOut = 'blockNumber,codeLength,proofLength,proofHashes,proofLeaves,touchedPCs\n'
   for (const bs of stats) {
-    const line = [bs.blockNumber,bs.codeLengthSum, bs.proofLengthSum, bs.proofHashesSum, bs.proofLeavesSum]
+    const line = [bs.blockNumber,bs.codeLengthSum, bs.proofLengthSum, bs.proofHashesSum, bs.proofLeavesSum, bs.touchedPCsSum]
     csvOut += line.join(',')
     csvOut += '\n'
   }
@@ -541,7 +577,8 @@ async function prepareProof(trie: any, addrs: Buffer[]): Promise<any> {
 
 interface CodeTrace {
   bytecode: Bytecode
-  touched: Set<number>
+  touched: Set<number> // touched chunks
+  touchedIndices: Set<number> // All touched pcs
 }
 
 function codeTracer(state: any, traces: { [k: string]: CodeTrace }, MIN_BLOCK_LEN: number, chunker: Chunker, debug: boolean = false) {
@@ -553,7 +590,8 @@ function codeTracer(state: any, traces: { [k: string]: CodeTrace }, MIN_BLOCK_LE
       const bytecode = new Bytecode(code, chunker)
       return {
         bytecode,
-        touched: new Set()
+        touched: new Set(),
+        touchedIndices: new Set()
       }
     }
 
@@ -570,16 +608,28 @@ function codeTracer(state: any, traces: { [k: string]: CodeTrace }, MIN_BLOCK_LE
     const chunk = trace.bytecode.pcChunk(runState.pc)
     if (!chunk) throw new Error('PC not in chunk')
     trace.touched.add(chunk.start)
+    trace.touchedIndices.add(runState.pc)
 
+    const codeLength = trace.bytecode.code.length
     const sp = runState.stack.length - 1
     // We also need parts of code asked for by CODECOPY 
     if (runState.opcode.name === 'CODECOPY') {
       // Get code offset and length from stack
-      const offset = runState.stack[sp - 1].toNumber()
-      const len = runState.stack[sp - 2].toNumber()
-      const chunks = trace.bytecode.chunkRange(offset, offset + len)
+      let offset = runState.stack[sp - 1].toNumber()
+      offset = offset > codeLength ? codeLength : offset
+      let len = runState.stack[sp - 2].toNumber()
+      let end = offset + len
+      end = end > codeLength ? codeLength : end
+
+      const chunks = trace.bytecode.chunkRange(offset, end)
       for (const c of chunks) {
         trace.touched.add(c.start)
+      }
+      for (let i = offset; i < end; i++) {
+        if (i >= runState.code.length) {
+          throw new Error(`Touching ${i} out of boundary [CODECOPY ${offset} : ${len}] ${runState.code.length}`)
+        }
+        trace.touchedIndices.add(i)
       }
     } else if (runState.opcode.name === 'EXTCODECOPY') {
       const extAddr = addressToBuffer(runState.stack[sp]).toString('hex')
@@ -589,11 +639,38 @@ function codeTracer(state: any, traces: { [k: string]: CodeTrace }, MIN_BLOCK_LE
         traces[extAddr] = await newContractData(await state.getContractCode(extAddr))
       }
       const extTrace = traces[extAddr]
-      const chunks = trace.bytecode.chunkRange(offset, offset + len)
+      const chunks = extTrace.bytecode.chunkRange(offset, offset + len)
       for (const c of chunks) {
-        trace.touched.add(c.start)
+        extTrace.touched.add(c.start)
+      }
+      for (let i = offset; i < offset + len; i++) {
+        if (i >= extTrace.bytecode.code.length) {
+          throw new Error(`Touching ${i} out of boundary [EXTCODECOPY] ${extTrace.bytecode.code.length}`)
+        }
+        extTrace.touchedIndices.add(i)
+      }
+    } else if (runState.opcode.name === 'EXTCODESIZE') {
+      const extAddr = addressToBuffer(runState.stack[sp]).toString('hex')
+      if (!traces[extAddr]) {
+        traces[extAddr] = await newContractData(await state.getContractCode(extAddr))
+      }
+    } else if (runState.opcode.name.startsWith('PUSH')) {
+      const toPush = runState.code[runState.pc] - 0x5f
+      for (let i = runState.pc + 1; i < runState.pc + 1 + toPush; i++) {
+        if (i >= runState.code.length) {
+          throw new Error(`Touching ${i} out of boundary [PUSH] ${runState.code.length}`)
+        }
+        trace.touchedIndices.add(i)
       }
     } else if (runState.opcode.name === 'EXTCODEHASH') {
+      const extAddr = addressToBuffer(runState.stack[sp]).toString('hex')
+      if (!traces[extAddr]) {
+        traces[extAddr] = await newContractData(await state.getContractCode(extAddr))
+      }
+    }
+    // TODO: EXTCODEHASH and EXTCODESIZE are to be handled
+    // by adding a metadata chunk to code trie
+    /* else if (runState.opcode.name === 'EXTCODEHASH') {
       const extAddr = addressToBuffer(runState.stack[sp]).toString('hex')
       if (!traces[extAddr]) {
         traces[extAddr] = await newContractData(await state.getContractCode(extAddr))
@@ -603,7 +680,7 @@ function codeTracer(state: any, traces: { [k: string]: CodeTrace }, MIN_BLOCK_LE
       for (const c of extTrace.bytecode.chunks) {
         extTrace.touched.add(c.start)
       }
-    }
+    }*/
   }
 }
 
@@ -651,7 +728,9 @@ async function getCodeProofs(traces: { [k: string]: CodeTrace }, createdContract
       codeRoot: trie.root,
       proof,
       sortedAddrs,
-      codeLength: bytecode.code.length // TODO: this is potentially attackable, encode length in trie somehow
+      touchedIndices: trace.touchedIndices, // TODO: remove from blockdata
+      codeLength: bytecode.code.length, // TODO: this is potentially attackable, encode length in trie somehow
+      codeHash: keccak256(bytecode.code)
     }
 
     // Statistics
