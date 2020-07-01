@@ -162,7 +162,7 @@ tape('merkelize evm bytecode', async t => {
   })
 })
 
-tape('state tests', async t => {
+tape.skip('state tests', async t => {
   const MIN_BLOCK_LEN = 128
   // ['multiOwnedAddOwner']
   const tests = await getStateTest('dayLimitSetDailyLimit')
@@ -273,7 +273,7 @@ tape('merkelize realistic bytecode', async (t: tape.Test) => {
 
     // Now that we've determined which blocks of
     // each contract have been touched, prepare proofs.
-    const blockData = await getCodeProofs(traces, createdContracts)
+    const codeProofs = await getCodeProofs(traces, createdContracts)
     const codeMetadata: any = {}
 
     let codeLengthSum = 0
@@ -284,13 +284,13 @@ tape('merkelize realistic bytecode', async (t: tape.Test) => {
     //let touchedPCsSum = 0
     // The verifier checks proofs and assembles proven
     // blocks of code
-    for (const addr in blockData) {
-      const contract = blockData[addr]
-      const keys = contract.sortedAddrs.map((a: Buffer) => keccak256(a))
-      t.assert(await verifyMultiproof(contract.codeRoot, contract.proof, keys), 'bytecode proof is valid')
-      const blockIndices = contract.sortedAddrs.map((a: Buffer) => new BN(a).toNumber())
-      const code = Buffer.alloc(contract.codeLength)
-      const leaves = contract.proof.keyvals.map((kv: Buffer) => decode(kv))
+    for (const codeHashS in codeProofs) {
+      const codeProof = codeProofs[codeHashS]
+      const keys = codeProof.sortedAddrs.map((a: Buffer) => keccak256(a))
+      t.assert(await verifyMultiproof(codeProof.codeRoot, codeProof.proof, keys), 'bytecode proof is valid')
+      const blockIndices = codeProof.sortedAddrs.map((a: Buffer) => new BN(a).toNumber())
+      const code = Buffer.alloc(codeProof.codeLength)
+      const leaves = codeProof.proof.keyvals.map((kv: Buffer) => decode(kv))
       //const validPCs = []
       for (let i = 0; i < leaves.length; i++) {
         const leaf = leaves[i]
@@ -302,11 +302,16 @@ tape('merkelize realistic bytecode', async (t: tape.Test) => {
         }*/
       }
       //validPCs.sort((a: any, b: any) => a - b)
-      if (!blockPreState.preState['0x' + addr]) {
-        continue
+      if (codeProof.addrs.length > 1) {
+        console.log('Duplicated code', codeProof.codeLength, codeProof.proof.length, codeProof.addrs)
       }
-      blockPreState.preState['0x' + addr].code = '0x' + code.toString('hex')
-      codeMetadata[addr] = { size: contract.codeLength, hash: contract.codeHash }
+      for (const addr of codeProof.addrs) {
+        if (!blockPreState.preState['0x' + addr]) {
+          continue
+        }
+        blockPreState.preState['0x' + addr].code = '0x' + code.toString('hex')
+        codeMetadata[addr] = { size: codeProof.codeLength, hash: codeProof.codeHash }
+      }
 
       // Make sure touched PCs are contained in chunks
       /*const sortedTouchedPCs = Array.from(contract.touchedIndices)
@@ -324,10 +329,10 @@ tape('merkelize realistic bytecode', async (t: tape.Test) => {
       }*/
 
       // Gather data for statistics
-      codeLengthSum += contract.codeLength
-      proofLengthSum += encode(rawMultiproof(contract.proof, true)).length
-      proofHashesSum += encode(contract.proof.hashes).length
-      proofLeavesSum += encode(contract.proof.keyvals).length
+      codeLengthSum += codeProof.codeLength
+      proofLengthSum += encode(rawMultiproof(codeProof.proof, true)).length
+      proofHashesSum += encode(codeProof.proof.hashes).length
+      proofLeavesSum += encode(codeProof.proof.keyvals).length
       //touchedPCsSum += contract.touchedIndices.size
     }
 
@@ -704,7 +709,7 @@ function printRunState(runState: any) {
 }
 
 async function getCodeProofs(traces: { [k: string]: CodeTrace }, createdContracts: { [k: string]: boolean }) {
-  const blockData: { [k: string]: any } = {}
+  const bytecodes: { [k: string]: any } = {}
   for (const addr of Object.keys(traces)) {
     if (createdContracts[addr]) {
       console.log('Ignoring created contract ', addr)
@@ -713,23 +718,45 @@ async function getCodeProofs(traces: { [k: string]: CodeTrace }, createdContract
 
     const trace = traces[addr]
     const bytecode = trace.bytecode
-    const trie = await bytecode.merkelizeCode()
-    const keyLength = new BN(bytecode.code.length - 1).byteLength()
-    const addrs = []
-    const touched: number[] = Array.from(trace.touched)
+    const codeHash = keccak256(bytecode.code)
+    const codeHashS = codeHash.toString('hex')
+    if (!bytecodes[codeHashS]) {
+      bytecodes[codeHashS] = {
+        bytecode,
+        codeLength: bytecode.code.length,
+        touched: trace.touched,
+        addrs: [addr] // Address of accounts which share this code
+      }
+    } else {
+      bytecodes[codeHashS].addrs.push(addr)
+      for (let chunkIdx of Array.from(trace.touched)) {
+        bytecodes[codeHashS].touched.add(chunkIdx)
+      }
+    }
     console.log('-- Stats for ', addr)
-    console.log('num of chunks: ', bytecode.chunks.length, ' num of touched blocks: ', touched.length)
+    console.log('num of chunks: ', bytecode.chunks.length, ' num of touched blocks: ', trace.touched.size)
+  }
+
+  const codeProofs: { [k: string]: any } = {}
+  for (const codeHash in bytecodes) {
+    const bytecodeData = bytecodes[codeHash]
+    const bytecode = bytecodeData.bytecode // much wow such creative naming
+    const keyLength = new BN(bytecodeData.bytecode.code.length - 1).byteLength()
+
+    const addrs = []
+    const touched: number[] = Array.from(bytecodeData.touched)
     for (let bi of touched) {
       addrs.push(new BN(bi).toBuffer('be', keyLength))
     }
+
+    const trie = await bytecode.merkelizeCode()
     const { proof, sortedAddrs } = await prepareProof(trie, addrs)
-    blockData[addr] = {
+    codeProofs[codeHash] = {
+      addrs: bytecodeData.addrs,
       codeRoot: trie.root,
       proof,
       sortedAddrs,
-      //touchedIndices: trace.touchedIndices, // TODO: remove from blockdata
-      codeLength: bytecode.code.length, // TODO: this is potentially attackable, encode length in trie somehow
-      codeHash: keccak256(bytecode.code)
+      codeLength: bytecode.code.length
     }
 
     // Statistics
@@ -741,7 +768,7 @@ async function getCodeProofs(traces: { [k: string]: CodeTrace }, createdContract
     console.log('proof hashes len: ', hashesEn.length, 'keyvals len: ', leavesEn.length)
     //blockStats(contract.code, MIN_BLOCK_LEN)
   }
-  return blockData
+  return codeProofs
 }
 
 function makeRealBlock(data: any): any {
