@@ -1,9 +1,7 @@
-{
-  "name": "biturbo",
+ "name": "biturbo",
   "version": "0.0.1",
   "description": "Eth1 EE using turboproofs",
-  "main": "index.js",
-  "scripts": {
+  "main": "index.js"
     "token": "npm run token:relayer && npm run token:build && npm run token:run",
     "token:relayer": "ts-node src/relayer/bin.ts",
     "token:build": "gulp token",
@@ -25,8 +23,7 @@
     "tsc": "ethereumjs-config-tsc",
     "test": "ts-node node_modules/tape/bin/tape test/**/*.ts",
     "test:as": "asp"
-  },
-  "devDependencies": {
+  "devDependencies"
     "@as-pect/assembly": "^2.6.0",
     "@as-pect/cli": "^2.6.0",
     "@as-pect/core": "^2.6.0",
@@ -49,8 +46,7 @@
     "typestrict": "^1.0.2",
     "util.promisify": "^1.0.0",
     "wabt": "^1.0.11"
-  },
-  "dependencies": {
+  "dependencies"
     "axios": "^0.19.0",
     "bn.js": "^5.0.0",
     "ethereumjs-account": "^3.0.0",
